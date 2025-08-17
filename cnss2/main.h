@@ -51,6 +51,7 @@
 #include <linux/pm_domain.h>
 #endif
 #include <linux/nvmem-consumer.h>
+#include <linux/version.h>
 
 #define MAX_NO_OF_MAC_ADDR		4
 #define QMI_WLFW_MAX_TIMESTAMP_LEN	32
@@ -392,8 +393,6 @@ enum cnss_driver_state {
 	CNSS_SHUTDOWN_DEVICE,
 	CNSS_POWERING_ON,
 	CNSS_SEC_DOWNLOAD,
-	CNSS_SOL_REGISTERED,
-
 };
 
 struct cnss_recovery_data {
@@ -763,6 +762,7 @@ struct cnss_plat_data {
 	struct nvmem_cell *nvmem_cell_wlan_seq_debug;
 	struct nvmem_cell *nvmem_cell_wlan_seq_count;
 #endif
+	struct cnss_wlan_host_param *host_param;
 };
 
 #if IS_ENABLED(CONFIG_ARCH_QCOM)
@@ -883,7 +883,6 @@ size_t cnss_get_platform_name(struct cnss_plat_data *plat_priv,
 			      char *buf, const size_t buf_len);
 int cnss_iommu_map(struct iommu_domain *domain, unsigned long iova,
 		   phys_addr_t paddr, size_t size, int prot);
-int cnss_init_sol_gpio(struct cnss_plat_data *plat_priv);
 int cnss_fw_managed_power_regulator(struct cnss_plat_data *plat_priv,
 				    bool enabled);
 int cnss_fw_managed_power_gpio(struct cnss_plat_data *plat_priv,
@@ -905,4 +904,26 @@ int cnss_get_cxpc(struct cnss_plat_data *plat_priv);
 int cnss_set_cx_voltage_corner(struct cnss_plat_data *plat_priv,
 			       enum cx_voltage_corners vc, u16 arg);
 u8 *cnss_debug_direct_cx(struct cnss_plat_data *plat_priv);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+static inline int cnss_timer_delete(struct timer_list *timer)
+{
+	return timer_delete(timer);
+}
+
+static inline int cnss_timer_delete_sync(struct timer_list *timer)
+{
+	return timer_delete_sync(timer);
+}
+#else
+static inline int cnss_timer_delete(struct timer_list *timer)
+{
+	return del_timer(timer);
+}
+
+static inline int cnss_timer_delete_sync(struct timer_list *timer)
+{
+	return del_timer_sync(timer);
+}
+#endif
 #endif /* _CNSS_MAIN_H */

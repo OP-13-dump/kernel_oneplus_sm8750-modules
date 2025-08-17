@@ -2175,6 +2175,15 @@ int cnss_wlfw_wlan_cfg_send_sync(struct cnss_plat_data *plat_priv,
 		}
 	}
 
+	if (plat_priv->host_param && plat_priv->host_param->chip_name) {
+		req->chip_name_valid = 1;
+		strscpy(req->chip_name, plat_priv->host_param->chip_name,
+			QMI_WLFW_MAX_STR_LEN_V01 + 1);
+
+		cnss_pr_dbg("chip_name: %s, chip_valid: %d, host_chip_name: %s\n",
+			    req->chip_name, req->chip_name_valid, plat_priv->host_param->chip_name);
+	}
+
 	ret = qmi_txn_init(&plat_priv->qmi_wlfw, &txn,
 			   wlfw_wlan_cfg_resp_msg_v01_ei, resp);
 	if (ret < 0) {
@@ -3745,14 +3754,6 @@ int cnss_wlfw_server_arrive(struct cnss_plat_data *plat_priv, void *data)
 		cnss_pr_err("Unexpected WLFW server arrive\n");
 		CNSS_ASSERT(0);
 		return -EINVAL;
-	}
-
-	if (!test_bit(CNSS_SOL_REGISTERED, &plat_priv->driver_state)) {
-		ret = cnss_init_sol_gpio(plat_priv);
-		if (ret)
-			cnss_pr_err("Unable to register sol GPIO %d\n", ret);
-		else
-			set_bit(CNSS_SOL_REGISTERED, &plat_priv->driver_state);
 	}
 
 	cnss_ignore_qmi_failure(false);
