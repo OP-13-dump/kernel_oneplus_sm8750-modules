@@ -349,17 +349,19 @@ static int raydium_ts_touch_entry(void)
 		if (!cancel_work_sync(&g_raydium_ts->work))
 			LOGD(LOG_DEBUG, "[touch]workqueue is empty!\n");
 
-		/* release all touches */
-		for (u8_i = 0; u8_i < g_raydium_ts->u8_max_touchs; u8_i++) {
-			pr_err("[touch]%s 1111\n", __func__);
-			input_mt_slot(g_raydium_ts->input_dev, u8_i);
-			input_mt_report_slot_state(g_raydium_ts->input_dev,
-					MT_TOOL_FINGER,
-					false);
-		}
+		if (g_raydium_ts->input_dev) {
+			/* release all touches */
+			for (u8_i = 0; u8_i < g_raydium_ts->u8_max_touchs; u8_i++) {
+				pr_err("[touch]%s 1111\n", __func__);
+				input_mt_slot(g_raydium_ts->input_dev, u8_i);
+				input_mt_report_slot_state(g_raydium_ts->input_dev,
+						MT_TOOL_FINGER,
+						false);
+			}
 
-		input_mt_report_pointer_emulation(g_raydium_ts->input_dev, false);
-		input_sync(g_raydium_ts->input_dev);
+			input_mt_report_pointer_emulation(g_raydium_ts->input_dev, false);
+			input_sync(g_raydium_ts->input_dev);
+		}
 	}
 
 	LOGD(LOG_INFO, "%s[touch] Start End\n", __func__);
