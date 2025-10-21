@@ -251,6 +251,7 @@ def define_monaco(t,v):
         variant = v,
         registry = touch_driver_modules,
         modules = [
+            "glink_comm",
             "pt_ts",
             "pt_i2c",
             "pt_device_access",
@@ -269,6 +270,7 @@ def define_monaco(t,v):
             "CONFIG_TOUCHSCREEN_PARADE_PROXIMITY",
             "CONFIG_TOUCHSCREEN_PARADE_DEBUG_MDL",
             "CONFIG_TOUCHSCREEN_RM_TS",
+            "CONFIG_TOUCHSCREEN_MSM_GLINK"
         ],
 )
 
