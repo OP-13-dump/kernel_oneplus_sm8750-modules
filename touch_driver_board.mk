@@ -10,7 +10,7 @@ endif
 
 ifeq ($(TOUCH_DLKM_ENABLE),  true)
         ifneq ($(TARGET_BOARD_AUTO),true)
-                ifeq ($(call is-board-platform-in-list,$(TARGET_BOARD_PLATFORM)),true)
+                ifneq (,$(call is-board-platform-in-list2,$(TARGET_BOARD_PLATFORM)))
                         ifeq ($(TARGET_BOARD_PLATFORM), vienna)
                                 BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES_OUT)/raydium_ts.ko \
                                         $(KERNEL_MODULES_OUT)/glink_comm.ko
