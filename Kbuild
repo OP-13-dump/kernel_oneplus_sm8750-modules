@@ -66,6 +66,11 @@ ifeq ($(CONFIG_ARCH_CANOE), y)
 	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_canoetouchconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_ART), y)
+	include $(TOUCH_ROOT)/config/gki_arttouch.conf
+	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_arttouchconf.h
+endif
+
 ifeq ($(CONFIG_ARCH_CHORA), y)
 	include $(TOUCH_ROOT)/config/gki_choratouch.conf
 	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_choratouchconf.h
