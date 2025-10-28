@@ -335,7 +335,7 @@ static int raydium_ts_touch_entry(void)
 			if (rc < 0)
 				pr_err("Could not set pins to suspend\n");
 		}
-#elif
+#else
 		//Release the gpio's
 		if (gpio_is_valid(g_raydium_ts->rst_gpio))
 			gpio_free(g_raydium_ts->rst_gpio);
@@ -403,7 +403,7 @@ static int raydium_ts_touch_exit(void)
 		}
 		pr_err("%d: pinctrl_select_state success for INT and RESET_N : %s\n",
 			 __LINE__, __func__);
-#elif
+#else
 		//Configure the gpio's
 		ret = raydium_ts_gpio_config(true);
 		if (ret < 0) {
