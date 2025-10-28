@@ -63,6 +63,30 @@ def define_sunvm(t,v):
         vm_target = True,
 )
 
+def define_alor_le(t,v):
+    define_target_variant_modules(
+        target = t,
+        variant = v,
+        registry = touch_driver_modules,
+        modules = [
+            "atmel_mxt_ts",
+            "dummy_ts",
+            "goodix_ts",
+            "st_fts",
+            "qts"
+        ],
+        config_options = [
+            "TOUCH_DLKM_ENABLE",
+            "CONFIG_ARCH_ALOR",
+            "CONFIG_MSM_TOUCH",
+            "CONFIG_TOUCHSCREEN_GOODIX_BRL",
+            "CONFIG_TOUCHSCREEN_ATMEL_MXT",
+            "CONFIG_TOUCHSCREEN_ST",
+            "CONFIG_QTS_ENABLE",
+            "CONFIG_TOUCHSCREEN_DUMMY"
+        ],
+)
+
 def define_canoevm(t,v):
     define_target_variant_modules(
         target = t,
@@ -329,6 +353,8 @@ def define_touch_target():
             define_sunvm(t, v)
         elif t == "canoe":
             define_canoe(t, v)
+        elif t == "alor-le":
+            define_alor_le(t, v)
         elif t == "bengal":
             define_bengal(t, v)
         elif t == "canoe-tuivm":
