@@ -178,6 +178,28 @@ def define_pineapple(t,v):
         ],
 )
 
+def define_malabar(t,v):
+    define_target_variant_modules(
+	target = t,
+	variant = v,
+	registry = touch_driver_modules,
+	modules = [
+	    "focaltech_fts",
+            "dummy_ts",
+	    "goodix_ts",
+	    "qts"
+	],
+	config_options = [
+	    "TOUCH_DLKM_ENABLE",
+	    "CONFIG_ARCH_MALABAR",
+	    "CONFIG_MSM_TOUCH",
+	    "CONFIG_TOUCH_FOCALTECH",
+	    "CONFIG_TOUCHSCREEN_GOODIX_BRL",
+	    "CONFIG_QTS_ENABLE",
+            "CONFIG_TOUCHSCREEN_DUMMY"
+	],
+)
+
 def define_blair(t,v):
     define_target_variant_modules(
         target = t,
@@ -282,6 +304,8 @@ def define_touch_target():
             define_pineapple(t, v)
         elif t == "parrot":
             define_parrot(t, v)
+        elif t == "malabar":
+            define_malabar(t, v)
         elif t == "lahaina":
             define_lahaina(t, v)
         elif t == "monaco":

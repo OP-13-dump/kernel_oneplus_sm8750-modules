@@ -35,6 +35,10 @@ ifeq ($(TOUCH_DLKM_ENABLE),  true)
                 PRODUCT_PACKAGES += $(KERNEL_MODULES_OUT)/goodix_ts.ko \
                         $(KERNEL_MODULES_OUT)/focaltech_fts.ko \
                         $(KERNEL_MODULES_OUT)/qts.ko
+        else ifeq ($(TARGET_BOARD_PLATFORM), malabar)
+                PRODUCT_PACKAGES += $(KERNEL_MODULES_OUT)/goodix_ts.ko \
+                        $(KERNEL_MODULES_OUT)/focaltech_fts.ko \
+                        $(KERNEL_MODULES_OUT)/qts.ko
         else ifeq ($(TARGET_BOARD_PLATFORM), pineapple)
                 PRODUCT_PACKAGES += $(KERNEL_MODULES_OUT)/goodix_ts.ko \
                         $(KERNEL_MODULES_OUT)/atmel_mxt_ts.ko \
