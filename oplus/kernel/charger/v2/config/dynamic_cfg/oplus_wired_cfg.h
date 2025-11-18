@@ -61,16 +61,18 @@ static void oplus_wired_update_input_power_config(
 	struct oplus_param_head *param_head, struct oplus_wired_spec_config *spec)
 {
 	struct oplus_cfg_data_head *data_head;
-	u32 buf[OPLUS_WIRED_CHG_MODE_MAX];
+	u32 buf[OPLUS_WIRED_CHG_MODE_MAX] = { 0 };
 	int i;
 	int rc;
 	int index = 0;
+	ssize_t data_len;
 
 	data_head = oplus_cfg_find_param_by_name(param_head, "oplus_spec,input-power-mw");
 	if (data_head == NULL)
 		return;
 
-	rc = oplus_cfg_get_data(data_head,  (u8 *)buf, sizeof(buf));
+	data_len = oplus_cfg_get_data_size(data_head);
+	rc = oplus_cfg_get_data(data_head, (u8 *)buf, sizeof(buf) > data_len ? data_len : sizeof(buf));
 	if (rc < 0) {
 		chg_err("get oplus_spec,input-power-mw data buf error, rc=%d\n", rc);
 		return;
@@ -91,11 +93,12 @@ static void oplus_wired_update_fcc_config(
 	struct oplus_param_head *param_head, struct oplus_wired_spec_config *spec)
 {
 	struct oplus_cfg_data_head *data_head;
-	u32 buf[OPLUS_WIRED_CHG_MODE_MAX * TEMP_REGION_MAX];
+	u32 buf[OPLUS_WIRED_CHG_MODE_MAX * TEMP_REGION_MAX] = { 0 };
 	int i, j;
 	int rc;
 	int log_index = 0;
 	int index = 0;
+	ssize_t data_len;
 	size_t buf_size = sizeof(buf) - (TEMP_REGION_MAX - oplus_comm_get_temp_region_max()) * sizeof(int32_t) *
 						OPLUS_WIRED_CHG_MODE_MAX;
 
@@ -120,7 +123,8 @@ static void oplus_wired_update_fcc_config(
 
 	data_head = oplus_cfg_find_param_by_name(param_head, "oplus_spec,fccmax-ma-lv");
 	if (data_head != NULL) {
-		rc = oplus_cfg_get_data(data_head, (u8 *)buf, buf_size);
+		data_len = oplus_cfg_get_data_size(data_head);
+		rc = oplus_cfg_get_data(data_head, (u8 *)buf, buf_size > data_len ? data_len : buf_size);
 		if (rc < 0) {
 			chg_err("get oplus_spec,fccmax-ma-lv buf error, rc=%d\n", rc);
 		} else {
@@ -149,7 +153,8 @@ static void oplus_wired_update_fcc_config(
 
 	data_head = oplus_cfg_find_param_by_name(param_head, "oplus_spec,fccmax-ma-hv");
 	if (data_head != NULL) {
-		rc = oplus_cfg_get_data(data_head, (u8 *)buf, buf_size);
+		data_len = oplus_cfg_get_data_size(data_head);
+		rc = oplus_cfg_get_data(data_head, (u8 *)buf, buf_size > data_len ? data_len : buf_size);
 		if (rc < 0) {
 			chg_err("get oplus_spec,fccmax-ma-hv buf error, rc=%d\n", rc);
 		} else {
@@ -339,7 +344,7 @@ static void oplus_wired_update_vbus_ov_uv_config(
 	struct oplus_param_head *param_head, struct oplus_wired_spec_config *spec)
 {
 	struct oplus_cfg_data_head *data_head;
-	u32 buf[OPLUS_VBUS_MAX];
+	u32 buf[OPLUS_VBUS_MAX] = { 0 };
 	ssize_t data_len;
 	int i;
 	int rc;
