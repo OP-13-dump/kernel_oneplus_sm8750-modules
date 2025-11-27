@@ -31,6 +31,11 @@ ifeq ($(CONFIG_ARCH_PINEAPPLE), y)
 	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_pineappletouchconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_MALABAR), y)
+	include $(TOUCH_ROOT)/config/gki_malabartouch.conf
+	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_malabartouchconf.h
+endif
+
 ifeq ($(CONFIG_ARCH_MONACO), y)
 	include $(TOUCH_ROOT)/config/gki_monacotouch.conf
 	LINUX_INC += -include $(TOUCH_ROOT)/config/gki_monacotouchconf.h

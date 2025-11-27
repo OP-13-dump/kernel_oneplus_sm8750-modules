@@ -5,6 +5,7 @@ targets = [
     "canoe",
     "chora",
     "gen3auto",
+    "malabar",
     "monaco",
     "sun",
     "vienna",
