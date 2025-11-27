@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -65,7 +67,7 @@ struct tcm_v1_message_header {
 static void syna_tcm_v1_terminate(struct tcm_dev *tcm_dev)
 {
 	struct tcm_message_data_blob *tcm_msg = NULL;
-	syna_pal_completion_t *cmd_completion = NULL;
+	struct completion *cmd_completion = NULL;
 
 	if (!tcm_dev) {
 		LOGE("Invalid tcm device handle\n");
@@ -190,7 +192,8 @@ static void syna_tcm_v1_update_crc(struct tcm_dev *tcm_dev)
 
 /*
  *  Set up the capability of message reading and writing.
- *  The given size to read/write must be equal or less than the max read/write size defined in the identify report
+ *  The given size to read/write must be equal or less than
+ *  the max read/write size defined in the identify report
  *
  * param
  *    [ in] tcm_dev: pointer to TouchComm device
@@ -348,7 +351,7 @@ static void syna_tcm_v1_dispatch_report(struct tcm_dev *tcm_dev)
 {
 	int retval;
 	struct tcm_message_data_blob *tcm_msg = NULL;
-	syna_pal_completion_t *cmd_completion = NULL;
+	struct completion *cmd_completion = NULL;
 	unsigned char report_code;
 
 	if (!tcm_dev) {
@@ -432,7 +435,8 @@ static void syna_tcm_v1_dispatch_report(struct tcm_dev *tcm_dev)
 					ATOMIC_SET(tcm_msg->command_status, CMD_STATE_IDLE);
 					syna_pal_completion_complete(cmd_completion);
 				} else {
-					LOGI("Unexpected 0x%02X report received\n", REPORT_IDENTIFY);
+					LOGI("Unexpected 0x%02X report received\n",
+						REPORT_IDENTIFY);
 					ATOMIC_SET(tcm_msg->command_status, CMD_STATE_ERROR);
 					syna_pal_completion_complete(cmd_completion);
 				}
@@ -471,7 +475,7 @@ static void syna_tcm_v1_dispatch_response(struct tcm_dev *tcm_dev)
 {
 	int retval;
 	struct tcm_message_data_blob *tcm_msg = NULL;
-	syna_pal_completion_t *cmd_completion = NULL;
+	struct completion *cmd_completion = NULL;
 
 	if (!tcm_dev) {
 		LOGE("Invalid tcm device handle\n");
@@ -683,7 +687,8 @@ static int syna_tcm_v1_write(struct tcm_dev *tcm_dev, unsigned char command,
 		chunk_space = tcm_dev->max_wr_size;
 
 	if (tcm_dev->hw->alignment_enabled)
-		chunk_space = syna_pal_int_alignment(chunk_space, tcm_dev->hw->alignment_base, false);
+		chunk_space = syna_pal_int_alignment(chunk_space,
+						tcm_dev->hw->alignment_base, false);
 
 	chunks = syna_pal_int_division(total_length, chunk_space, true);
 	chunks = chunks == 0 ? 1 : chunks;
@@ -707,7 +712,8 @@ static int syna_tcm_v1_write(struct tcm_dev *tcm_dev, unsigned char command,
 
 		if (tcm_dev->hw->alignment_enabled) {
 			if (last && (xfer_length > tcm_dev->hw->alignment_boundary)) {
-				xfer_length = syna_pal_int_alignment(xfer_length, tcm_dev->hw->alignment_base, false) - 1;
+				xfer_length = syna_pal_int_alignment(xfer_length,
+							tcm_dev->hw->alignment_base, false) - 1;
 				if (xfer_length != remaining_length) {
 					chunks += 1;
 					last = false;
@@ -877,7 +883,8 @@ static int syna_tcm_v1_continued_read(struct tcm_dev *tcm_dev, unsigned int leng
 		chunk_space = tcm_dev->max_rd_size;
 
 	if (tcm_dev->hw->alignment_enabled)
-		chunk_space = syna_pal_int_alignment(chunk_space, tcm_dev->hw->alignment_base, false);
+		chunk_space = syna_pal_int_alignment(chunk_space,
+						tcm_dev->hw->alignment_base, false);
 
 	chunks = syna_pal_int_division(total_length, chunk_space, true);
 	chunks = chunks == 0 ? 1 : chunks;
@@ -904,7 +911,8 @@ static int syna_tcm_v1_continued_read(struct tcm_dev *tcm_dev, unsigned int leng
 
 		if (tcm_dev->hw->alignment_enabled) {
 			if (last && (xfer_length > tcm_dev->hw->alignment_boundary)) {
-				xfer_length = syna_pal_int_alignment(xfer_length, tcm_dev->hw->alignment_base, false) - 2;
+				xfer_length = syna_pal_int_alignment(xfer_length,
+					tcm_dev->hw->alignment_base, false) - 2;
 				if (xfer_length != remaining_length) {
 					chunks += 1;
 					last = false;
@@ -997,7 +1005,7 @@ static int syna_tcm_v1_read_message(struct tcm_dev *tcm_dev,
 	int retval = 0;
 	struct tcm_v1_message_header *header;
 	struct tcm_message_data_blob *tcm_msg = NULL;
-	syna_pal_mutex_t *rw_mutex = NULL;
+	struct mutex *rw_mutex = NULL;
 	unsigned int len = 0;
 	bool do_predict = false;
 	unsigned int tmp_len;
@@ -1143,10 +1151,10 @@ do_dispatch:
 	if (tcm_dev->cb_data_duplicator[tcm_msg->status_report_code].cb) {
 		syna_tcm_buf_lock(&tcm_msg->in);
 		tcm_dev->cb_data_duplicator[tcm_msg->status_report_code].cb(
-				tcm_msg->status_report_code,
-				&tcm_msg->in.buf[MESSAGE_HEADER_SIZE],
-				tcm_msg->payload_length,
-				tcm_dev->cb_data_duplicator[tcm_msg->status_report_code].private_data);
+			tcm_msg->status_report_code,
+			&tcm_msg->in.buf[MESSAGE_HEADER_SIZE],
+			tcm_msg->payload_length,
+			tcm_dev->cb_data_duplicator[tcm_msg->status_report_code].private_data);
 		syna_tcm_buf_unlock(&tcm_msg->in);
 	}
 
@@ -1230,9 +1238,9 @@ static int syna_tcm_v1_write_message(struct tcm_dev *tcm_dev,
 	int retval = 0;
 	unsigned int timeout = 0;
 	struct tcm_message_data_blob *tcm_msg = NULL;
-	syna_pal_mutex_t *cmd_mutex = NULL;
-	syna_pal_mutex_t *rw_mutex = NULL;
-	syna_pal_completion_t *cmd_completion = NULL;
+	struct mutex *cmd_mutex = NULL;
+	struct mutex *rw_mutex = NULL;
+	struct completion *cmd_completion = NULL;
 	bool in_polling = false;
 	bool irq_disabled = false;
 
@@ -1458,7 +1466,8 @@ int syna_tcm_v1_detect(struct tcm_dev *tcm_dev, bool bypass, bool do_reset)
 	LOGI("TouchComm v1 detected\n");
 	if ((tcm_msg->has_crc) || (tcm_msg->has_extra_rc))
 		LOGI("Support of message CRC(%s) and extra RC(%s)\n",
-				(tcm_msg->has_crc) ? "yes" : "no", (tcm_msg->has_extra_rc) ? "yes" : "no");
+				(tcm_msg->has_crc) ? "yes" : "no",
+				(tcm_msg->has_extra_rc) ? "yes" : "no");
 
 set_ops:
 	tcm_dev->read_message = syna_tcm_v1_read_message;

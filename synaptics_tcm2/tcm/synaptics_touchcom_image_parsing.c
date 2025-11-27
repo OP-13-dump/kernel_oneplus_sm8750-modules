@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -223,7 +225,8 @@ static int syna_tcm_save_flash_partition_data(struct area_block *partition,
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_parse_fw_image(const unsigned char *binary, unsigned int size, struct image_info *image)
+int syna_tcm_parse_fw_image(const unsigned char *binary,
+	unsigned int size, struct image_info *image)
 {
 	int retval = 0;
 	unsigned int idx;
@@ -289,9 +292,11 @@ int syna_tcm_parse_fw_image(const unsigned char *binary, unsigned int size, stru
 			continue;
 		}
 
-		retval = syna_tcm_save_flash_partition_data(&image->data[area], area, descriptor, content, length);
+		retval = syna_tcm_save_flash_partition_data(&image->data[area],
+			area, descriptor, content, length);
 		if (retval < 0) {
-			LOGD("Fail to save the partition data of %s\n", FLASH_PARTITION_ID_STR((enum flash_area)area));
+			LOGD("Fail to save the partition data of %s\n",
+				FLASH_PARTITION_ID_STR((enum flash_area)area));
 			continue;
 		}
 	}

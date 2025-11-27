@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -37,8 +39,8 @@
 #define _SYNAPTICS_TCM2_DRIVER_H_
 
 #include "syna_tcm2_platform.h"
-#include "synaptics_touchcom_core_dev.h"
-#include "synaptics_touchcom_func_base.h"
+#include "tcm/synaptics_touchcom_core_dev.h"
+#include "tcm/synaptics_touchcom_func_base.h"
 
 #define PLATFORM_DRIVER_NAME "synaptics_tcm"
 
@@ -225,7 +227,7 @@ struct syna_tcm {
 	struct syna_hw_interface *hw_if;
 
 	/* IRQ handling */
-	syna_pal_mutex_t tp_event_mutex;
+	struct mutex tp_event_mutex;
 	struct tcm_buffer event_data;
 	pid_t isr_pid;
 	bool irq_wake;
@@ -285,7 +287,7 @@ struct syna_tcm {
 	unsigned int fifo_remaining_frame;
 	struct list_head frame_fifo_queue;
 	wait_queue_head_t wait_frame;
-	syna_pal_mutex_t fifo_queue_mutex;
+	struct mutex fifo_queue_mutex;
 	unsigned int fifo_depth;
 #endif
 
@@ -303,12 +305,12 @@ struct syna_tcm {
 	bool is_tddi_multichip;
 #endif
 	bool concurrent_reporting;
-	syna_pal_completion_t init_completed;
+	struct completion init_completed;
 
 	/* Misc. for the character device access */
 	void *userspace_app_info;
 	struct tcm_buffer cdev_buffer;
-	syna_pal_mutex_t cdev_mutex;
+	struct mutex cdev_mutex;
 	unsigned int cdev_polling_interval;
 	int cdev_extra_bytes;
 	unsigned int cdev_origin_max_wr_size;

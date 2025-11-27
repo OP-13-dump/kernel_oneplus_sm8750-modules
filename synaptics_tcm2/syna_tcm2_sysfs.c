@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -36,13 +38,13 @@
 #include <linux/string.h>
 
 #include "syna_tcm2.h"
-#include "synaptics_touchcom_core_dev.h"
-#include "synaptics_touchcom_func_base.h"
+#include "tcm/synaptics_touchcom_core_dev.h"
+#include "tcm/synaptics_touchcom_func_base.h"
 #ifdef REFLASH_TDDI
-#include "synaptics_touchcom_func_reflash_tddi.h"
+#include "tcm/synaptics_touchcom_func_reflash_tddi.h"
 #endif
 #ifdef REFLASH_DISCRETE_TOUCH
-#include "synaptics_touchcom_func_reflash.h"
+#include "tcm/synaptics_touchcom_func_reflash.h"
 #endif
 
 #ifdef HAS_SYSFS_INTERFACE
@@ -276,10 +278,10 @@ static ssize_t syna_sysfs_pwr_store(struct kobject *kobj,
 		return count;
 	}
 
-	if (strncmp(buf, "resume", 6) == 0) {
+	if (strcmp(buf, "resume") == 0) {
 		if (tcm->dev_resume)
 			tcm->dev_resume(p_dev);
-	} else if (strncmp(buf, "suspend", 7) == 0) {
+	} else if (strcmp(buf, "suspend") == 0) {
 		if (tcm->dev_suspend)
 			tcm->dev_suspend(p_dev);
 	} else {

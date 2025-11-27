@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -42,7 +44,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "syna_tcm2_runtime.h"
+#include "./../syna_tcm2_runtime.h"
 
 
 /* Types for Lower-Level Bus */
@@ -87,7 +89,8 @@ struct tcm_hw_platform {
 	unsigned int wr_chunk_size;
 
 	/* enable the support of interrupt or attention (ATTN)
-	 * set to 'true' if the platform supports ATTN notifications; otherwise, set to 'false' by default.
+	 * set to 'true' if the platform supports ATTN notifications;
+	 * otherwise, set to 'false' by default.
 	 */
 	bool support_attn;
 
@@ -147,7 +150,9 @@ struct tcm_hw_platform {
 	 *    [ in] timeout:  timeout time waiting for the assertion
 	 *
 	 * return
-	 *    0 in case of timeout, positive value in case of ATTN asserted, a negative value otherwise.
+	 *    0 in case of timeout,
+	 *    positive value in case of ATTN asserted,
+	 *    a negative value otherwise.
 	 */
 	int (*ops_wait_for_attn)(struct tcm_hw_platform *hw, int timeout);
 

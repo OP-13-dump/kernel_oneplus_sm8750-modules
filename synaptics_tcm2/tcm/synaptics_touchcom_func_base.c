@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -75,9 +77,11 @@
  * param
  *    [ in] tcm_msg: handle of message wrapper
  *    [ in] product: the required timing settings for products
- *                   alternatively, set 'NULL' and then do setup through the third argument 'setting'
+ *                   alternatively, set 'NULL' and then do setup
+ *                   through the third argument 'setting'
  *    [ in] setting: '0' if using 'product' to update
- *                   otherwise, a positive value to change a particular setting
+ *                   otherwise, a positive value to change
+ *                   a particular setting
  *    [ in] type:    enum in tcm_message_timings
  * return
  *    0 or positive value in case of success, a negative value otherwise.
@@ -104,12 +108,18 @@ int syna_tcm_config_timings(struct tcm_dev *tcm_dev, struct tcm_timings *product
 		return -ERR_INVAL;
 	}
 
-	SET_TIMING(TIMINGS_TURNAROUND, product->cmd_turnaround_us, tcm_msg->command_timeout_time, "Turnaround time");
-	SET_TIMING(TIMINGS_CMD_TIMEOUT, product->cmd_timeout_ms, tcm_msg->command_timeout_time, "Command timeout");
-	SET_TIMING(TIMINGS_CMD_POLLING, product->cmd_polling_ms, tcm_msg->command_polling_time, "Response polling time");
-	SET_TIMING(TIMINGS_CMD_RETRY, product->cmd_retry_ms, tcm_msg->command_retry_time, "Command retry time");
-	SET_TIMING(TIMINGS_FW_SWITCH, product->fw_switch_delay_ms, tcm_dev->fw_mode_switching_time, "Firmware switch");
-	SET_TIMING(TIMINGS_RESET_DELAY, product->reset_delay_ms, tcm_dev->reset_delay_time, "Firmware reset");
+	SET_TIMING(TIMINGS_TURNAROUND, product->cmd_turnaround_us,
+		tcm_msg->command_timeout_time, "Turnaround time");
+	SET_TIMING(TIMINGS_CMD_TIMEOUT, product->cmd_timeout_ms,
+		tcm_msg->command_timeout_time, "Command timeout");
+	SET_TIMING(TIMINGS_CMD_POLLING, product->cmd_polling_ms,
+		tcm_msg->command_polling_time, "Response polling time");
+	SET_TIMING(TIMINGS_CMD_RETRY, product->cmd_retry_ms,
+		tcm_msg->command_retry_time, "Command retry time");
+	SET_TIMING(TIMINGS_FW_SWITCH, product->fw_switch_delay_ms,
+		tcm_dev->fw_mode_switching_time, "Firmware switch");
+	SET_TIMING(TIMINGS_RESET_DELAY, product->reset_delay_ms,
+		tcm_dev->reset_delay_time, "Firmware reset");
 
 	if (((type & TIMINGS_CMD_RETRY_COUNT) == TIMINGS_CMD_RETRY_COUNT) && (setting != 0)) {
 		tcm_msg->retry_cmd_cnt = setting;
@@ -325,7 +335,9 @@ int syna_tcm_allocate_device(struct tcm_dev **ptcm_dev_ptr,
 		(hw->support_attn) ? "yes" : "no");
 	if (hw->alignment_enabled) {
 		LOGI("Platform capability: data alignment(%s), base(%d), boundary(%d)\n",
-			(hw->alignment_base > 0) ? "yes" : "no", hw->alignment_base, hw->alignment_boundary);
+			(hw->alignment_base > 0) ? "yes" : "no",
+			hw->alignment_base,
+			hw->alignment_boundary);
 	}
 
 	return 0;
@@ -416,14 +428,15 @@ int syna_tcm_detect_device(struct tcm_dev *tcm_dev, unsigned int mode, bool rese
 #ifdef TOUCHCOMM_VERSION_1
 		if (syna_tcm_v1_detect(tcm_dev, bypass, reset_to_detect) < 0) {
 			if (tcm_dev->msg_data.in.buf_size > 0) {
-				LOGE("Fail to detect TouchComm v1 device, %02x %02x %02x %02x ...\n",
+				LOGE("TouchComm v1 device not detected: %02x %02x %02x %02x ...\n",
 					tcm_dev->msg_data.in.buf[0], tcm_dev->msg_data.in.buf[1],
 					tcm_dev->msg_data.in.buf[2], tcm_dev->msg_data.in.buf[3]);
 			}
 			return -ERR_NODEV;
 		}
 #else
-		LOGE("Implementations of Touchcomm v%d is not built in\n", PROTOCOL_DETECT_VERSION_1);
+		LOGE("Implementations of Touchcomm v%d is not built in\n",
+			PROTOCOL_DETECT_VERSION_1);
 		return -ERR_INVAL;
 #endif
 		break;
@@ -431,14 +444,15 @@ int syna_tcm_detect_device(struct tcm_dev *tcm_dev, unsigned int mode, bool rese
 #ifdef TOUCHCOMM_VERSION_2
 		if (syna_tcm_v2_detect(tcm_dev, bypass, reset_to_detect) < 0) {
 			if (tcm_dev->msg_data.in.buf_size > 0) {
-				LOGE("Fail to detect TouchComm v2 device, %02x %02x %02x %02x ...\n",
+				LOGE("TouchComm v2 device not detected: %02x %02x %02x %02x ...\n",
 					tcm_dev->msg_data.in.buf[0], tcm_dev->msg_data.in.buf[1],
 					tcm_dev->msg_data.in.buf[2], tcm_dev->msg_data.in.buf[3]);
 			}
 			return -ERR_NODEV;
 		}
 #else
-		LOGE("Implementations of Touchcomm v%d is not built in\n", PROTOCOL_DETECT_VERSION_2);
+		LOGE("Implementations of Touchcomm v%d is not built in\n",
+			PROTOCOL_DETECT_VERSION_2);
 		return -ERR_INVAL;
 #endif
 		break;
@@ -649,6 +663,7 @@ exit:
 int syna_tcm_reset(struct tcm_dev *tcm_dev, unsigned int resp_reading)
 {
 	int retval = 0;
+	struct tcm_post_reset_callback cb_handler;
 
 	if (!tcm_dev) {
 		LOGE("Invalid tcm device handle\n");
@@ -685,10 +700,11 @@ int syna_tcm_reset(struct tcm_dev *tcm_dev, unsigned int resp_reading)
 	 * because identification report will be received after reset
 	 */
 	tcm_dev->dev_mode = tcm_dev->id_info.mode;
+	cb_handler = tcm_dev->cb_post_reset_handler;
 
 	/* call the post reset operation if registered */
-	if (tcm_dev->cb_post_reset_handler.cb) {
-		retval = tcm_dev->cb_post_reset_handler.cb(tcm_dev->cb_post_reset_handler.private_data);
+	if (cb_handler.cb) {
+		retval = cb_handler.cb(cb_handler.private_data);
 		if (retval < 0) {
 			LOGE("Fail to perform the post reset operation\n");
 			goto exit;
@@ -1359,8 +1375,10 @@ int syna_tcm_get_app_info(struct tcm_dev *tcm_dev,
 
 	tcm_dev->cols = syna_pal_le2_to_uint(tcm_dev->app_info.num_of_image_cols);
 	tcm_dev->rows = syna_pal_le2_to_uint(tcm_dev->app_info.num_of_image_rows);
-	syna_pal_mem_cpy((unsigned char *)tcm_dev->config_id, MAX_SIZE_CONFIG_ID,
-			tcm_dev->app_info.customer_config_id, MAX_SIZE_CONFIG_ID, MAX_SIZE_CONFIG_ID);
+	syna_pal_mem_cpy((unsigned char *)tcm_dev->config_id,
+			MAX_SIZE_CONFIG_ID,
+			tcm_dev->app_info.customer_config_id,
+			MAX_SIZE_CONFIG_ID, MAX_SIZE_CONFIG_ID);
 
 	LOGD("App info version: %d, status: %d\n",
 		syna_pal_le2_to_uint(tcm_dev->app_info.version), app_status);
@@ -2021,7 +2039,8 @@ exit:
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_set_max_read_size(struct tcm_dev *tcm_dev, unsigned int rd_size, unsigned int resp_reading)
+int syna_tcm_set_max_read_size(struct tcm_dev *tcm_dev,
+	unsigned int rd_size, unsigned int resp_reading)
 {
 #ifdef TOUCHCOMM_VERSION_2
 	int retval = 0;
@@ -2080,7 +2099,8 @@ exit:
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_set_max_write_size(struct tcm_dev *tcm_dev, unsigned int wr_size, unsigned int resp_reading)
+int syna_tcm_set_max_write_size(struct tcm_dev *tcm_dev,
+	unsigned int wr_size, unsigned int resp_reading)
 {
 #ifdef TOUCHCOMM_VERSION_2
 	int retval = 0;

@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -143,7 +145,8 @@ char *syna_tcm_get_partition_id_string(enum flash_area area);
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_parse_fw_image(const unsigned char *binary, unsigned int size, struct image_info *image);
+int syna_tcm_parse_fw_image(const unsigned char *binary,
+	unsigned int size, struct image_info *image);
 
 
 #ifdef __cplusplus

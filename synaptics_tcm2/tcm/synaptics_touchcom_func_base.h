@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -98,11 +100,13 @@ void syna_tcm_remove_device(struct tcm_dev *tcm_dev);
  *  version of TouchComm firmware running on the device.
  *
  * param
- *    [ in] tcm_dev:          pointer to TouchComm device
- *    [ in] mode:             mode for the protocol detection
- *                            [0:3] x1 DETECT_VERSION_1 - detect TouchComm version 1 only
- *                                  x2 DETECT_VERSION_2 - detect TouchComm version 2 only
- *                            [4:7] x8 FORCE_ASSIGNMENT - direct assign the protocol without the detection
+ *    [ in] tcm_dev:	pointer to TouchComm device
+ *    [ in] mode:		mode for the protocol detection
+ *                      [0:3] x1 DETECT_VERSION_1
+ *                         - detect TouchComm version 1 only
+ *                      x2 DETECT_VERSION_2 - detect TouchComm version 2 only
+ *                      [4:7] x8 FORCE_ASSIGNMENT
+ *                         - direct assign protocol without detection
  *
  *    [ in] reset_to_detect:  set if willing to use 'reset' command for the detection
  *
@@ -116,7 +120,8 @@ int syna_tcm_detect_device(struct tcm_dev *tcm_dev, unsigned int mode, bool rese
  *
  *    [ in] tcm_msg: handle of message wrapper
  *    [ in] product: the required timing settings for products
- *                   alternatively, set 'NULL' and then do setup through the third argument 'setting'
+ *                   alternatively, set 'NULL' and then do setup
+ *                   through the third argument 'setting'
  *    [ in] setting: '0' if using 'product' to update
  *                   otherwise, a positive value to change a particular setting
  *    [ in] type:    target to change
@@ -416,7 +421,8 @@ int syna_tcm_send_command(struct tcm_dev *tcm_dev, unsigned char command,
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_set_max_read_size(struct tcm_dev *tcm_dev, unsigned int rd_size, unsigned int resp_reading);
+int syna_tcm_set_max_read_size(struct tcm_dev *tcm_dev,
+	unsigned int rd_size, unsigned int resp_reading);
 
 /*
  *  Helper to configure the current write size.
@@ -430,7 +436,8 @@ int syna_tcm_set_max_read_size(struct tcm_dev *tcm_dev, unsigned int rd_size, un
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-int syna_tcm_set_max_write_size(struct tcm_dev *tcm_dev, unsigned int wr_size, unsigned int resp_reading);
+int syna_tcm_set_max_write_size(struct tcm_dev *tcm_dev,
+	unsigned int wr_size, unsigned int resp_reading);
 
 
 

@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -228,7 +230,7 @@ static int syna_tcm_get_gesture_data(const unsigned char *report,
 
 	data_end = offset + bits;
 
-	size = (sizeof(gesture_data->data) / sizeof(unsigned char));
+	size = ARRAY_SIZE(gesture_data->data);
 
 	idx = 0;
 	while ((offset < data_end) && (idx < size)) {

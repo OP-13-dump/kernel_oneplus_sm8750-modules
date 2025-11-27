@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -38,14 +40,14 @@
 #include "syna_tcm2.h"
 #include "syna_tcm2_cdev.h"
 #include "syna_tcm2_platform.h"
-#include "synaptics_touchcom_core_dev.h"
-#include "synaptics_touchcom_func_base.h"
-#include "synaptics_touchcom_func_touch.h"
+#include "tcm/synaptics_touchcom_core_dev.h"
+#include "tcm/synaptics_touchcom_func_base.h"
+#include "tcm/synaptics_touchcom_func_touch.h"
 #ifdef REFLASH_DISCRETE_TOUCH
-#include "synaptics_touchcom_func_reflash.h"
+#include "tcm/synaptics_touchcom_func_reflash.h"
 #endif
 #ifdef REFLASH_TDDI
-#include "synaptics_touchcom_func_reflash_tddi.h"
+#include "tcm/synaptics_touchcom_func_reflash_tddi.h"
 #endif
 
 #ifdef USE_CUSTOM_TOUCH_REPORT_CONFIG
@@ -104,9 +106,12 @@ static void syna_dev_helper_work(struct work_struct *work)
 	if (IS_BOOTLOADER_MODE(tcm->tcm_dev->dev_mode)) {
 		if (syna_tcm_get_boot_info(tcm->tcm_dev, NULL, CMD_RESPONSE_IN_POLLING) >= 0)
 			LOGI("Bootloader status: 0x%x (reset reason: 0x%x)\n",
-				tcm->tcm_dev->boot_info.status, tcm->tcm_dev->boot_info.last_reset_reason);
+				tcm->tcm_dev->boot_info.status,
+				tcm->tcm_dev->boot_info.last_reset_reason);
 #ifdef FLASH_RECOVERY
-		queue_delayed_work(tcm->reflash_workqueue, &tcm->reflash_work, msecs_to_jiffies(100));
+		queue_delayed_work(tcm->reflash_workqueue,
+			&tcm->reflash_work,
+			msecs_to_jiffies(100));
 #endif
 	}
 
@@ -115,7 +120,9 @@ static void syna_dev_helper_work(struct work_struct *work)
 		if (app_status != APP_STATUS_OK) {
 			LOGI("Bad app status: 0x%x\n", app_status);
 #ifdef FLASH_RECOVERY
-			queue_delayed_work(tcm->reflash_workqueue, &tcm->reflash_work, msecs_to_jiffies(100));
+			queue_delayed_work(tcm->reflash_workqueue,
+				&tcm->reflash_work,
+				msecs_to_jiffies(100));
 #endif
 		} else {
 			LOGI("Re-configure the app fw due to reset\n");
@@ -845,14 +852,14 @@ static int syna_dev_request_irq(struct syna_tcm *tcm)
 			attn->irq_id,
 			NULL,
 			syna_dev_isr,
-			attn->irq_flags,
+			attn->irq_flags | IRQF_ONESHOT,
 			PLATFORM_DRIVER_NAME,
 			tcm);
 #else /* Legacy API */
 	retval = request_threaded_irq(attn->irq_id,
 			NULL,
 			syna_dev_isr,
-			attn->irq_flags,
+			attn->irq_flags | IRQF_ONESHOT,
 			PLATFORM_DRIVER_NAME,
 			tcm);
 #endif
@@ -898,7 +905,7 @@ static void syna_dev_release_irq(struct syna_tcm *tcm)
 		hw->ops_enable_attn(hw, false);
 
 #ifdef DEV_MANAGED_API
-	devm_free_irq(dev, attn->irq_id, tcm);
+	disable_irq_nosync(attn->irq_id);
 #else
 	free_irq(attn->irq_id, tcm);
 #endif
@@ -1600,7 +1607,7 @@ static int syna_dev_disconnect(struct syna_tcm *tcm)
 {
 	struct syna_hw_interface *hw_if = tcm->hw_if;
 
-	if (tcm->is_connected == false) {
+	if (!tcm->is_connected) {
 		LOGI("%s already disconnected\n", PLATFORM_DRIVER_NAME);
 		return 0;
 	}
@@ -1892,8 +1899,8 @@ static int syna_dev_probe(struct platform_device *pdev)
 
 	tcm = syna_pal_mem_alloc(1, sizeof(struct syna_tcm));
 	if (!tcm) {
-		LOGE("Fail to create the handle of syna_tcm\n");
-		return -ENOMEM;
+		LOGW("Fail to create the handle of syna_tcm, try it later\n");
+		return -EPROBE_DEFER;
 	}
 
 	syna_pal_completion_alloc(&tcm->init_completed);
@@ -2130,7 +2137,8 @@ static const struct dev_pm_ops syna_dev_pm_ops = {
 #if defined(USE_DRM_BRIDGE)
 	.suspend = syna_dev_panel_suspend,
 	.resume = syna_dev_panel_resume,
-#elif !defined(ENABLE_DISP_NOTIFIER)
+#elif defined(ENABLE_DISP_NOTIFIER)
+#else
 	.suspend = syna_dev_suspend,
 	.resume = syna_dev_resume,
 #endif
@@ -2140,7 +2148,6 @@ static const struct dev_pm_ops syna_dev_pm_ops = {
 static struct platform_driver syna_dev_driver = {
 	.driver = {
 		.name = PLATFORM_DRIVER_NAME,
-		.owner = THIS_MODULE,
 #ifdef CONFIG_PM
 		.pm = &syna_dev_pm_ops,
 #endif
@@ -2176,10 +2183,9 @@ static void __exit syna_dev_module_exit(void)
 	LOGI("Driver %s uninstalled\n", PLATFORM_DRIVER_NAME);
 }
 
-module_init(syna_dev_module_init);
+late_initcall(syna_dev_module_init);
 module_exit(syna_dev_module_exit);
 
-MODULE_AUTHOR("Synaptics, Inc.");
 MODULE_DESCRIPTION("Synaptics TouchComm Touch Driver");
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 

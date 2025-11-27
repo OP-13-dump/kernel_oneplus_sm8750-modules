@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -344,7 +346,7 @@ struct tcm_buffer {
 	unsigned char *buf;
 	unsigned int buf_size;
 	unsigned int data_length;
-	syna_pal_mutex_t buf_mutex;
+	struct mutex buf_mutex;
 	unsigned char ref_cnt;
 };
 
@@ -612,7 +614,7 @@ struct tcm_message_data_blob {
 	unsigned int retry_cmd_cnt;
 
 	/* completion event for command processing */
-	syna_pal_completion_t cmd_completion;
+	struct completion cmd_completion;
 
 	/* internal buffers
 	 *   in  : buffer storing the data being read 'in'
@@ -624,10 +626,10 @@ struct tcm_message_data_blob {
 	struct tcm_buffer temp;
 
 	/* mutex to protect the command processing */
-	syna_pal_mutex_t cmd_mutex;
+	struct mutex cmd_mutex;
 
 	/* mutex to ensure that only a read or a write is requested */
-	syna_pal_mutex_t rw_mutex;
+	struct mutex rw_mutex;
 
 	/* variables for the support of write then read operation */
 	bool write_then_read_support;
@@ -681,7 +683,7 @@ struct tcm_dev {
 	/* hardware platform interface */
 	struct tcm_hw_platform *hw;
 	/* resources of irq control */
-	syna_pal_mutex_t irq_en_mutex;
+	struct mutex irq_en_mutex;
 
 	/* firmware info packet */
 	struct tcm_identification_info id_info;

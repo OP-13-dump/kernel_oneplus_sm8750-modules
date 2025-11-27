@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -38,8 +40,8 @@
 
 #include "syna_tcm2.h"
 #include "syna_tcm2_cdev.h"
-#include "synaptics_touchcom_core_dev.h"
-#include "synaptics_touchcom_func_base.h"
+#include "tcm/synaptics_touchcom_core_dev.h"
+#include "tcm/synaptics_touchcom_func_base.h"
 
 #if (KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE) || \
 	defined(HAVE_UNLOCKED_IOCTL)
@@ -179,7 +181,8 @@ static int syna_cdev_push_data_to_fifo(struct syna_tcm *tcm,
 	tcm->fifo_remaining_frame++;
 	retval = 0;
 
-	LOGD("Frames %d (size:%d) queued in FIFO\n", tcm->fifo_remaining_frame, pfifo_data->data_length);
+	LOGD("Frames %d (size:%d) queued in FIFO\n",
+		tcm->fifo_remaining_frame, pfifo_data->data_length);
 
 	/* once reaching the queue size, stop to queue data in FIFO */
 	if (tcm->fifo_depth != 0) {
@@ -284,7 +287,8 @@ static int syna_cdev_update_fifo(struct syna_tcm *tcm, unsigned char code,
 		}
 	}
 
-	LOGD("Pushing data to queue (size:%d code:0x%02x data length:%d)\n", size, code, data_length);
+	LOGD("Pushing data to queue (size:%d code:0x%02x data length:%d)\n",
+		size, code, data_length);
 
 	retval = syna_cdev_push_data_to_fifo(tcm, frame_buffer, size);
 	if (retval < 0) {
@@ -671,7 +675,9 @@ static int syna_cdev_ioctl_get_frame(struct syna_tcm *tcm,
 	LOGD("Popping data from the queue, data size:%d\n", pfifo_data->data_length);
 
 	if (buf_size >= pfifo_data->data_length) {
-		retval = copy_to_user((void *)ubuf_ptr, pfifo_data->fifo_data, pfifo_data->data_length);
+		retval = copy_to_user((void *)ubuf_ptr,
+			pfifo_data->fifo_data,
+			pfifo_data->data_length);
 		if (retval) {
 			LOGE("Fail to copy data to user space, size:%d\n", retval);
 			retval = -EBADE;
@@ -766,7 +772,9 @@ static int syna_cdev_ioctl_set_queued_types(struct syna_tcm *tcm,
 	for (idx = 0; idx < MAX_REPORT_TYPES; idx++) {
 		if (data[idx] == 1) {
 			retval = syna_tcm_set_data_duplicator(tcm->tcm_dev,
-					(unsigned char) idx, syna_cdev_process_reports, (void *)tcm);
+					(unsigned char) idx,
+					syna_cdev_process_reports,
+					(void *)tcm);
 			if (retval < 0) {
 				LOGE("Fail to register the handler for report %x\n", idx);
 				return retval;
@@ -876,7 +884,8 @@ static int syna_cdev_ioctl_send_message(struct syna_tcm *tcm,
 	retval = syna_tcm_send_command(tcm_dev, data_ptr[0], &data_ptr[3],
 			payload_length, &resp_code, &resp_data_buf, resp_handling);
 	if (retval < 0)
-		LOGE("Fail to run command 0x%02x with payload len %d\n", data_ptr[0], payload_length);
+		LOGE("Fail to run command 0x%02x with payload len %d\n",
+			data_ptr[0], payload_length);
 
 	syna_pal_mem_set(data_ptr, 0, buf_size);
 	/* status code */
@@ -1399,7 +1408,8 @@ static int syna_cdev_ioctl_set_config(struct syna_tcm *tcm,
 		/* change the feature of predict reading */
 		predict_read = (param->feature.predict_reads == 1);
 		if (tcm_dev->msg_data.predict_reads != predict_read) {
-			LOGI("request to %s predict reading\n", (predict_read) ? "enable":"disable");
+			LOGI("request to %s predict reading\n",
+				(predict_read) ? "enable":"disable");
 			syna_tcm_enable_predict_reading(tcm_dev, predict_read);
 		}
 		/* change the feature of extra bytes reading */
@@ -1671,7 +1681,9 @@ static long syna_cdev_compat_ioctls(struct file *filp,
 	if (retval < 0)
 		goto exit;
 
-	retval = copy_to_user(compat_ptr(arg), &ioc_data, sizeof(struct syna_tcm_ioctl_data_compat));
+	retval = copy_to_user(compat_ptr(arg),
+		&ioc_data,
+		sizeof(struct syna_tcm_ioctl_data_compat));
 	if (retval) {
 		LOGE("Fail to update ioctl_data to user space, size:%d\n", retval);
 		retval = -EBADE;
@@ -1730,7 +1742,8 @@ static ssize_t syna_cdev_read(struct file *filp, char __user *buf, size_t count,
 
 	retval = syna_cdev_ioctl_raw_read(tcm, (const unsigned char *)buf, count, count);
 	if (retval != count)
-		LOGE("Invalid read operation, request:%d, return:%d\n", (unsigned int)count, retval);
+		LOGE("Invalid read operation, request:%d, return:%d\n",
+			(unsigned int)count, retval);
 
 	syna_pal_mutex_unlock(&tcm->cdev_mutex);
 
@@ -1749,7 +1762,8 @@ static ssize_t syna_cdev_read(struct file *filp, char __user *buf, size_t count,
  * return
  *    0 or positive value in case of success, a negative value otherwise.
  */
-static ssize_t syna_cdev_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
+static ssize_t syna_cdev_write(struct file *filp, const char __user *buf,
+								size_t count, loff_t *f_pos)
 {
 	int retval = 0;
 	struct syna_tcm *tcm = (struct syna_tcm *)filp->private_data;
@@ -1766,7 +1780,8 @@ static ssize_t syna_cdev_write(struct file *filp, const char __user *buf, size_t
 
 	retval = syna_cdev_ioctl_raw_write(tcm, (const unsigned char *)buf, count, count);
 	if (retval != count)
-		LOGE("Invalid write operation, request:%d, return:%d\n", (unsigned int)count, retval);
+		LOGE("Invalid write operation, request:%d, return:%d\n",
+			(unsigned int)count, retval);
 
 	syna_pal_mutex_unlock(&tcm->cdev_mutex);
 

@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -111,7 +113,9 @@ static int syna_tcm_compare_image_id_info(struct tcm_dev *tcm_dev,
 
 	app_config = &image_info->data[AREA_APP_CONFIG];
 
-	if (app_config->size < MIN(sizeof(struct app_config_header), sizeof(struct app_config_header_v2))) {
+	if (app_config->size <
+		MIN(sizeof(struct app_config_header),
+			sizeof(struct app_config_header_v2))) {
 		LOGE("Invalid application config in image file\n");
 		return UPDATE_NONE;
 	}
@@ -403,7 +407,8 @@ static int syna_tcm_check_flash_tool_boot_config(struct area_block *config,
 	LOGD("Boot Config address in device: 0x%x\n", device_addr);
 
 	if (image_addr != device_addr) {
-		LOGE("Boot Config address mismatched, device: 0x%x, image file: 0x%x\n", device_addr, image_addr);
+		LOGE("Boot Config address mismatched, device: 0x%x, image file: 0x%x\n",
+			device_addr, image_addr);
 		return -ERR_INVAL;
 	}
 
@@ -1061,7 +1066,8 @@ static int syna_tcm_read_flash_boot_cs_config(struct tcm_dev *tcm_dev,
 			goto exit;
 		}
 
-		retval = syna_tcm_read_flash(tcm_dev, addr, &cs_config.buf[0], rd_size, resp_reading);
+		retval = syna_tcm_read_flash(tcm_dev, addr,
+			&cs_config.buf[0], rd_size, resp_reading);
 		if (retval < 0) {
 			LOGE("Fail to read cs from the address %X\n", addr);
 			goto exit;
@@ -1412,16 +1418,19 @@ static int syna_tcm_write_flash(struct tcm_dev *tcm_dev,
 		reflash_data->out.buf[0] = (unsigned char)block_address;
 		reflash_data->out.buf[1] = (unsigned char)(block_address >> 8);
 
-		num_blocks = syna_pal_int_division(xfer_length, reflash_data->write_block_size, true);
+		num_blocks = syna_pal_int_division(xfer_length,
+			reflash_data->write_block_size, true);
 
 		if (wr_delay_us == CMD_RESPONSE_IN_ATTN) {
-			LOGD("xfer: %d (blocks: %d), delay: ATTN-driven\n", xfer_length, num_blocks);
+			LOGD("xfer: %d (blocks: %d), delay: ATTN-driven\n",
+				xfer_length, num_blocks);
 			resp_delay = CMD_RESPONSE_IN_ATTN;
 		} else {
 			resp_delay = (wr_delay_us * num_blocks) / 1000;
 			if (resp_delay == 0)
 				resp_delay = 1;
-			LOGD("xfer: %d (blocks: %d), delay: %d ms\n", xfer_length, num_blocks, resp_delay);
+			LOGD("xfer: %d (blocks: %d), delay: %d ms\n",
+				xfer_length, num_blocks, resp_delay);
 		}
 
 		retval = syna_pal_mem_cpy(&reflash_data->out.buf[2],
@@ -1453,7 +1462,8 @@ static int syna_tcm_write_flash(struct tcm_dev *tcm_dev,
 		reflash_data->bytes_updated += xfer_length;
 #ifdef HAS_PROGRESS_FEEDBACK
 		if (tcm_dev->cb_progress_callback)
-			tcm_dev->cb_progress_callback(reflash_data->bytes_updated, reflash_data->total_bytes_to_update);
+			tcm_dev->cb_progress_callback(reflash_data->bytes_updated,
+				reflash_data->total_bytes_to_update);
 #endif
 	}
 
@@ -1512,7 +1522,8 @@ static int syna_tcm_write_flash_opt(struct tcm_dev *tcm_dev,
 	w_length -= (w_length % reflash_data->write_block_size);
 
 	start_address = address / reflash_data->write_block_size;
-	end_address = start_address + syna_pal_int_division(wr_len, reflash_data->write_block_size, true);
+	end_address = start_address + syna_pal_int_division(wr_len,
+					reflash_data->write_block_size, true);
 
 	offset = 0;
 
@@ -1547,14 +1558,17 @@ static int syna_tcm_write_flash_opt(struct tcm_dev *tcm_dev,
 		reflash_data->out.buf[4] = (unsigned char)end_address;
 		reflash_data->out.buf[5] = (unsigned char)(end_address >> 8);
 
-		num_blocks = syna_pal_int_division(xfer_length, reflash_data->write_block_size, true);
+		num_blocks = syna_pal_int_division(xfer_length,
+						reflash_data->write_block_size, true);
 
 		if (wr_delay_us == CMD_RESPONSE_IN_ATTN) {
-			LOGD("xfer: %d (blocks: %d), delay: ATTN-driven\n", xfer_length, num_blocks);
+			LOGD("xfer: %d (blocks: %d), delay: ATTN-driven\n",
+				xfer_length, num_blocks);
 			resp_delay = CMD_RESPONSE_IN_ATTN;
 		} else {
 			resp_delay = (wr_delay_us * num_blocks) / 1000;
-			LOGD("xfer: %d (blocks: %d), delay: %d ms\n", xfer_length, num_blocks, resp_delay);
+			LOGD("xfer: %d (blocks: %d), delay: %d ms\n",
+				xfer_length, num_blocks, resp_delay);
 		}
 
 		retval = syna_pal_mem_cpy(&reflash_data->out.buf[6],
@@ -1586,7 +1600,8 @@ static int syna_tcm_write_flash_opt(struct tcm_dev *tcm_dev,
 		reflash_data->bytes_updated += xfer_length;
 #ifdef HAS_PROGRESS_FEEDBACK
 		if (tcm_dev->cb_progress_callback)
-			tcm_dev->cb_progress_callback(reflash_data->bytes_updated, reflash_data->total_bytes_to_update);
+			tcm_dev->cb_progress_callback(reflash_data->bytes_updated,
+				reflash_data->total_bytes_to_update);
 #endif
 	}
 
@@ -1785,7 +1800,8 @@ static int syna_tcm_erase_flash_block(struct tcm_dev *tcm_dev,
 	}
 
 	if (opt_write) {
-		LOGN("Bypass %s area due to the optimized write\n", FLASH_PARTITION_ID_STR(block->id));
+		LOGN("Bypass %s area due to the optimized write\n",
+			FLASH_PARTITION_ID_STR(block->id));
 		return 0;
 	}
 
@@ -1908,13 +1924,16 @@ static int syna_tcm_update_flash_block(struct tcm_dev *tcm_dev,
  *    [ in] op:                     requested operation
  *                                    use '0' in default, that updates both firmware and config
  *                                    otherwise, refer to the enumerated value of update_operation
- *    [ in] flash_erase_delay_ms:   set up the ms delay time to wait for the completion of flash access
+ *    [ in] flash_erase_delay_ms:   set up the ms delay time to
+ *                                  wait for the completion of flash access
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
- *    [ in] flash_write_delay_us:   set up the us delay time to wait for the completion of flash access
+ *    [ in] flash_write_delay_us:   set up the us delay time to
+ *                                  wait for the completion of flash access
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
- *    [ in] fw_switch_delay_ms:     set up the ms delay time to wait for the completion of firmware switching
+ *    [ in] fw_switch_delay_ms:     set up the ms delay time to
+ *                                  wait for the completion of firmware switching
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *    [ in] use_opt:                perform the optimized flash write operation if supported
@@ -1972,9 +1991,11 @@ int syna_tcm_do_fw_update_ex(struct tcm_dev *tcm_dev, struct image_info *image,
 		reflash_data.op |= UPDATE_FIRMWARE_AND_CONFIG;
 
 	if ((reflash_data.op & UPDATE_FIRMWARE) == UPDATE_FIRMWARE)
-		reflash_data.total_bytes_to_update += reflash_data.image_info->data[AREA_APP_CODE].size;
+		reflash_data.total_bytes_to_update +=
+			reflash_data.image_info->data[AREA_APP_CODE].size;
 	if ((reflash_data.op & UPDATE_CONFIG) == UPDATE_CONFIG)
-		reflash_data.total_bytes_to_update += reflash_data.image_info->data[AREA_APP_CONFIG].size;
+		reflash_data.total_bytes_to_update +=
+			reflash_data.image_info->data[AREA_APP_CONFIG].size;
 
 	/* set up flash access, and enter the bootloader mode */
 	retval = syna_tcm_set_up_flash_access(tcm_dev, &reflash_data,
@@ -2045,8 +2066,10 @@ exit:
  *    [ in] tcm_dev:                pointer to TouchComm device
  *    [ in] image:                  binary data to write
  *    [ in] image_size:             size of data array
- *    [ in] flash_delay_settings:   set up the us delay time to wait for the completion of flash access
- *                                    for polling,     set a value formatted with [erase ms | write us];
+ *    [ in] flash_delay_settings:   set up the us delay time to
+ *                                  wait for the completion of flash access
+ *                                    for polling,     set a value formatted
+ *                                    with [erase ms | write us];
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *    [ in] force_reflash:         '1' to do reflash anyway
  *                                 '0' to compare ID info before doing reflash.
@@ -2118,7 +2141,9 @@ reflash:
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_lockdown_config(struct tcm_dev *tcm_dev, struct image_info *image,
 	unsigned int flash_write_delay_us)
@@ -2177,7 +2202,8 @@ int syna_tcm_update_lockdown_config(struct tcm_dev *tcm_dev, struct image_info *
 	ATOMIC_SET(tcm_dev->firmware_flashing, 1);
 
 	/* set up flash access, and enter the bootloader mode */
-	retval = syna_tcm_set_up_flash_access(tcm_dev, &reflash_data, resp_handling, fw_switch_time);
+	retval = syna_tcm_set_up_flash_access(tcm_dev, &reflash_data,
+		resp_handling, fw_switch_time);
 	if (retval < 0) {
 		LOGE("Fail to set up flash access\n");
 		goto exit;
@@ -2213,8 +2239,11 @@ int syna_tcm_update_lockdown_config(struct tcm_dev *tcm_dev, struct image_info *
 		LOGD("Config start addr: 0x%X (%d), offset:%d\n",
 			start_addr, start_addr, offset);
 
-		retval = syna_tcm_write_flash(tcm_dev, &reflash_data, start_addr + (i * BOOT_CONFIG_SLOT_SIZE),
-				&data[i * BOOT_CONFIG_SLOT_SIZE], BOOT_CONFIG_SLOT_SIZE, flash_write_delay_us);
+		retval = syna_tcm_write_flash(tcm_dev, &reflash_data,
+			start_addr + (i * BOOT_CONFIG_SLOT_SIZE),
+			&data[i * BOOT_CONFIG_SLOT_SIZE],
+			BOOT_CONFIG_SLOT_SIZE,
+		flash_write_delay_us);
 		if (retval < 0)
 			goto exit;
 	}
@@ -2247,7 +2276,9 @@ exit:
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_cs_config(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	unsigned int cs_data_size, unsigned int cs_offset, unsigned int flash_write_delay_us)
@@ -2290,7 +2321,8 @@ int syna_tcm_update_cs_config(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	ATOMIC_SET(tcm_dev->firmware_flashing, 1);
 
 	/* set up flash access, and enter the bootloader mode */
-	retval = syna_tcm_set_up_flash_access(tcm_dev, &reflash_data, resp_handling, fw_switch_time);
+	retval = syna_tcm_set_up_flash_access(tcm_dev, &reflash_data,
+		resp_handling, fw_switch_time);
 	if (retval < 0) {
 		LOGE("Fail to set up flash access\n");
 		goto exit;
@@ -2328,7 +2360,7 @@ int syna_tcm_update_cs_config(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 		offset = syna_pal_int_division(offset, m, true) * m;
 	}
 	if (offset != cs_offset)
-		LOGD("Apply the modified offset, %d, because the giving value, %d, is not %d-byte-aligned\n",
+		LOGD("Apply offset %d,because giving %d,is not %d-byte-aligned\n",
 			offset, cs_offset, m);
 
 	/* skip the written area */
@@ -2402,7 +2434,9 @@ exit:
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_read_cs_data(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	unsigned int cs_data_size, unsigned int cs_offset, unsigned int flash_read_delay_us)
@@ -2447,12 +2481,15 @@ int syna_tcm_read_cs_data(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	}
 
 	LOGD("Request to read %d bytes\n", cs_data_size);
-	size = syna_pal_int_division(cs_data_size, reflash_data.write_block_size, true) * reflash_data.write_block_size;
+	size = syna_pal_int_division(cs_data_size, reflash_data.write_block_size, true);
+	size *= reflash_data.write_block_size;
 	if (size != cs_data_size)
-		LOGD("Apply the modified max size to read, %d, because the giving value, %d, is not %d-byte-aligned\n",
+		LOGD("Apply max size to read %d,because giving %d, is not %d-byte-aligned\n",
 			size, cs_data_size, reflash_data.write_block_size);
 
-	retval = syna_tcm_read_flash_boot_cs_config(tcm_dev, &reflash_data, &cs, size, cs_offset, flash_read_delay_us);
+	retval = syna_tcm_read_flash_boot_cs_config(tcm_dev,
+		&reflash_data, &cs,
+		size, cs_offset, flash_read_delay_us);
 	if (retval < 0) {
 		LOGE("Fail to read cs config data\n");
 		goto exit;
@@ -2489,7 +2526,9 @@ exit:
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	unsigned int mtp_data_size, unsigned int mtp_offset, unsigned int flash_write_delay_us)
@@ -2536,7 +2575,8 @@ int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	}
 
 	if (reflash_data.boot_info->version < 3) {
-		LOGE("MTP area may not be supported. Boot info version: %d\n", reflash_data.boot_info->version);
+		LOGE("MTP area may not be supported. Boot info version: %d\n",
+			reflash_data.boot_info->version);
 		goto exit;
 	}
 
@@ -2550,7 +2590,7 @@ int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 		offset = syna_pal_int_division(offset, m, true) * m;
 	}
 	if (offset != mtp_offset)
-		LOGD("Apply the modified offset, %d, because the giving value, %d, is not %d-byte-aligned\n",
+		LOGD("Apply offset, %d, because giving, %d, is not %d-byte-aligned\n",
 			offset, mtp_offset, m);
 
 	m = reflash_data.write_block_size;
@@ -2563,7 +2603,8 @@ int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 		retval = -ERR_NOMEM;
 		goto exit;
 	}
-	syna_pal_mem_cpy(data, reflash_data.total_bytes_to_update, mtp_data, mtp_data_size, mtp_data_size);
+	syna_pal_mem_cpy(data, reflash_data.total_bytes_to_update,
+		mtp_data, mtp_data_size, mtp_data_size);
 
 	addr = reflash_data.mtp_config_start_addr + offset;
 	LOGD("Config start addr: 0x%X (%d), offset:%d\n",
@@ -2604,7 +2645,9 @@ exit:
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_read_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	unsigned int mtp_data_size, unsigned int mtp_offset, unsigned int flash_read_delay_us)
@@ -2649,17 +2692,22 @@ int syna_tcm_read_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	}
 
 	if (reflash_data.boot_info->version < 3) {
-		LOGE("MTP area may not be supported. Boot info version: %d\n", reflash_data.boot_info->version);
+		LOGE("MTP area may not be supported. Boot info version: %d\n",
+			reflash_data.boot_info->version);
 		goto exit;
 	}
 
 	LOGD("Request to read %d bytes\n", mtp_data_size);
-	size = syna_pal_int_division(mtp_data_size, reflash_data.write_block_size, true) * reflash_data.write_block_size;
+	size = syna_pal_int_division(mtp_data_size, reflash_data.write_block_size, true);
+	size *= reflash_data.write_block_size;
 	if (size != mtp_data_size)
-		LOGD("Apply the modified max size to read, %d, because the giving value, %d, is not %d-byte-aligned\n",
+		LOGD("Apply max size, %d, giving value, %d, is not %d-byte-aligned\n",
 			size, mtp_data_size, reflash_data.write_block_size);
 
-	retval = syna_tcm_read_flash_mtp_config(tcm_dev, &reflash_data, &mtp, size, mtp_offset, flash_read_delay_us);
+	retval = syna_tcm_read_flash_mtp_config(tcm_dev,
+		&reflash_data, &mtp,
+		size, mtp_offset,
+		flash_read_delay_us);
 	if (retval < 0) {
 		LOGE("Fail to read mtp config data\n");
 		goto exit;
@@ -2691,7 +2739,9 @@ exit:
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_erase_mtp_data(struct tcm_dev *tcm_dev, unsigned int flash_erase_delay_us)
 {
@@ -2727,7 +2777,8 @@ int syna_tcm_erase_mtp_data(struct tcm_dev *tcm_dev, unsigned int flash_erase_de
 	}
 
 	if (reflash_data.boot_info->version < 3) {
-		LOGE("MTP area may not be supported. Boot info version: %d\n", reflash_data.boot_info->version);
+		LOGE("MTP area may not be supported. Boot info version: %d\n",
+			reflash_data.boot_info->version);
 		goto exit;
 	}
 

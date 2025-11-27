@@ -27,7 +27,10 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
+
 
 /*
  * This file declares relevant functions and structures for Bootloader.
@@ -74,13 +77,16 @@ enum update_operation {
  *    [ in] op:                     requested operation
  *                                    use '0' in default, that updates both firmware and config
  *                                    otherwise, refer to the enumerated value of update_operation
- *    [ in] flash_erase_delay_ms:   set up the ms delay time to wait for the completion of flash access
+ *    [ in] flash_erase_delay_ms:   set up the ms delay time to
+ *                                  wait for the completion of flash access
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
- *    [ in] flash_write_delay_us:   set up the us delay time to wait for the completion of flash access
+ *    [ in] flash_write_delay_us:   set up the us delay time to
+ *                                  wait for the completion of flash access
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
- *    [ in] fw_switch_delay_ms:     set up the ms delay time to wait for the completion of firmware switching
+ *    [ in] fw_switch_delay_ms:     set up the ms delay time to
+ *                                  wait for the completion of firmware switching
  *                                    for polling,     set a positive value;
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *    [ in] use_opt:                perform the optimized flash write operation if supported
@@ -105,8 +111,9 @@ int syna_tcm_do_fw_update_ex(struct tcm_dev *tcm_dev, struct image_info *image,
  *    [ in] tcm_dev:                pointer to TouchComm device
  *    [ in] image:                  binary data to write
  *    [ in] image_size:             size of data array
- *    [ in] flash_delay_settings:   set up the us delay time to wait for the completion of flash access
- *                                    for polling,     set a value formatted with [erase ms | write us];
+ *    [ in] flash_delay_settings:   set up the us delay time to
+ *                                  wait for the completion of flash access for polling,
+ *                                    set a value formatted with [erase ms | write us];
  *                                    for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *    [ in] force_reflash:         '1' to do reflash anyway
  *                                 '0' to compare ID info before doing reflash.
@@ -166,7 +173,9 @@ int syna_tcm_read_flash_area(struct tcm_dev *tcm_dev, enum flash_area area,
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_lockdown_config(struct tcm_dev *tcm_dev, struct image_info *image,
 	unsigned int flash_write_delay_us);
@@ -183,7 +192,9 @@ int syna_tcm_update_lockdown_config(struct tcm_dev *tcm_dev, struct image_info *
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_cs_config(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	unsigned int cs_data_size, unsigned int cs_offset, unsigned int flash_write_delay_us);
@@ -201,7 +212,9 @@ int syna_tcm_update_cs_config(struct tcm_dev *tcm_dev, unsigned char *cs_data,
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_read_cs_data(struct tcm_dev *tcm_dev, unsigned char *cs_data,
 	unsigned int cs_data_size, unsigned int cs_offset, unsigned int flash_write_delay_us);
@@ -219,7 +232,9 @@ int syna_tcm_read_cs_data(struct tcm_dev *tcm_dev, unsigned char *cs_data,
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	unsigned int mtp_data_size, unsigned int mtp_offset, unsigned int flash_write_delay_us);
@@ -237,7 +252,9 @@ int syna_tcm_update_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  *
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_read_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
 	unsigned int mtp_data_size, unsigned int mtp_offset, unsigned int flash_read_delay_us);
@@ -251,7 +268,9 @@ int syna_tcm_read_mtp_data(struct tcm_dev *tcm_dev, unsigned char *mtp_data,
  *                                   for polling,     set a positive value;
  *                                   for ATTN-driven, use '0' or 'RESP_IN_ATTN'
  * return
- *    positive value in case of success, 0 if device has been locked already, a negative value otherwise.
+ *    positive value in case of success,
+ *    0 if device has been locked already,
+ *    a negative value otherwise.
  */
 int syna_tcm_erase_mtp_data(struct tcm_dev *tcm_dev, unsigned int flash_erase_delay_us);
 

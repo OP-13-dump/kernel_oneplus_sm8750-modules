@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -36,7 +38,7 @@
 #ifndef _SYNAPTICS_TCM2_PLATFORM_H_
 #define _SYNAPTICS_TCM2_PLATFORM_H_
 
-#include "synaptics_touchcom_platform.h"
+#include "tcm/synaptics_touchcom_platform.h"
 #include "syna_tcm2_runtime.h"
 
 /*
@@ -74,7 +76,7 @@ struct syna_hw_bus_data {
 	unsigned int spi_byte_delay_us;
 	unsigned int spi_block_delay_us;
 	/* mutex to protect the i/o */
-	syna_pal_mutex_t io_mutex;
+	struct mutex io_mutex;
 	/* option for io switch */
 	int switch_gpio;
 	int switch_state;
@@ -89,7 +91,7 @@ struct syna_hw_attn_data {
 	int irq_id;
 	bool irq_enabled;
 	/* mutex to protect the irq control */
-	syna_pal_mutex_t irq_en_mutex;
+	struct mutex irq_en_mutex;
 };
 
 /* Hardware Data for reset pin */

@@ -27,6 +27,8 @@
  * NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES, SYNAPTICS'
  * TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT EXCEED ONE HUNDRED U.S.
  * DOLLARS.
+ *
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
 /*
@@ -74,15 +76,16 @@
 
 /*
  * TouchComm Protocol Configuration Flags
+ * If no defined, default to Version 1 support.
  */
-
-/* Enable TouchComm protocol version 1 */
 #if defined(CONFIG_TOUCHSCREEN_SYNA_TCM2_TOUCHCOMM_VERSION_1)
 #define TOUCHCOMM_VERSION_1
-#endif
-/* Enable TouchComm protocol version 2 */
+#else
 #if defined(CONFIG_TOUCHSCREEN_SYNA_TCM2_TOUCHCOMM_VERSION_2)
 #define TOUCHCOMM_VERSION_2
+#else
+#define TOUCHCOMM_VERSION_1
+#endif
 #endif
 
 /* Enable support for TDDI device */
@@ -222,7 +225,9 @@ static inline unsigned int syna_pal_int_division(unsigned int numerator,
 	if (denominator == 0)
 		return 0;
 
-	return (round_up) ? ((numerator + denominator - 1) / denominator) : (numerator / denominator);
+	return (round_up)
+		? ((numerator + denominator - 1) / denominator)
+		: (numerator / denominator);
 }
 /*
  * Calculate the alignment of a value.
@@ -230,12 +235,15 @@ static inline unsigned int syna_pal_int_division(unsigned int numerator,
  * param
  *    [ in] value: the value whose alignment is to be calculated.
  *    [ in] base: the base value against which the alignment of the value is determined.
- *    [ in] round_up: if true, returns the smallest multiple of the base greater than or equal to value;
- *                    if false, returns the largest multiple of the base less than or equal to value.
+ *    [ in] round_up: if true, returns the smallest multiple
+ *						of the base greater than or equal to value;
+ *                    if false, returns the largest multiple
+ *						of the base less than or equal to value.
  * return
  *   the aligned value.
  */
-static inline unsigned int syna_pal_int_alignment(unsigned int value, unsigned int base, bool round_up)
+static inline unsigned int syna_pal_int_alignment(unsigned int value,
+	unsigned int base, bool round_up)
 {
 	if ((value == 0) || (base == 0))
 		return 0;
@@ -266,7 +274,7 @@ static inline void *syna_pal_mem_alloc(unsigned int num, unsigned int size)
 	struct device *dev = syna_request_managed_device();
 
 	if (!dev) {
-		LOGE("Invalid managed device\n");
+		LOGW("Invalid managed device\n");
 		return NULL;
 	}
 #endif
@@ -301,8 +309,6 @@ static inline void syna_pal_mem_free(void *ptr)
 		return;
 	}
 
-	if (ptr)
-		devm_kfree(dev, ptr);
 #else /* Legacy API */
 	kfree(ptr);
 #endif
@@ -352,14 +358,6 @@ static inline int syna_pal_mem_cpy(void *dest, unsigned int dest_size,
 	return 0;
 }
 
-
-
-/*
- * Abstractions of C runtime for mutex
- */
-
-typedef struct mutex syna_pal_mutex_t;
-
 /*
  * Create a mutex object.
  *
@@ -369,7 +367,7 @@ typedef struct mutex syna_pal_mutex_t;
  * return
  *    0 in case of success, a negative value otherwise.
  */
-static inline int syna_pal_mutex_alloc(syna_pal_mutex_t *ptr)
+static inline int syna_pal_mutex_alloc(struct mutex *ptr)
 {
 	mutex_init((struct mutex *)ptr);
 	return 0;
@@ -383,7 +381,7 @@ static inline int syna_pal_mutex_alloc(syna_pal_mutex_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_mutex_free(syna_pal_mutex_t *ptr)
+static inline void syna_pal_mutex_free(struct mutex *ptr)
 {
 	/* do nothing */
 }
@@ -396,7 +394,7 @@ static inline void syna_pal_mutex_free(syna_pal_mutex_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_mutex_lock(syna_pal_mutex_t *ptr)
+static inline void syna_pal_mutex_lock(struct mutex *ptr)
 {
 	mutex_lock((struct mutex *)ptr);
 }
@@ -409,17 +407,10 @@ static inline void syna_pal_mutex_lock(syna_pal_mutex_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_mutex_unlock(syna_pal_mutex_t *ptr)
+static inline void syna_pal_mutex_unlock(struct mutex *ptr)
 {
 	mutex_unlock((struct mutex *)ptr);
 }
-
-
-/*
- * Abstractions of completion event
- */
-
-typedef struct completion syna_pal_completion_t;
 
 /*
  * Allocate a completion event, and the default state is not set.
@@ -431,7 +422,7 @@ typedef struct completion syna_pal_completion_t;
  * return
  *   0 in case of success, a negative value otherwise.
  */
-static inline int syna_pal_completion_alloc(syna_pal_completion_t *ptr)
+static inline int syna_pal_completion_alloc(struct completion *ptr)
 {
 	init_completion((struct completion *)ptr);
 	return 0;
@@ -445,7 +436,7 @@ static inline int syna_pal_completion_alloc(syna_pal_completion_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_completion_free(syna_pal_completion_t *ptr)
+static inline void syna_pal_completion_free(struct completion *ptr)
 {
 	/* do nothing */
 }
@@ -458,7 +449,7 @@ static inline void syna_pal_completion_free(syna_pal_completion_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_completion_complete(syna_pal_completion_t *ptr)
+static inline void syna_pal_completion_complete(struct completion *ptr)
 {
 	if (!completion_done((struct completion *)ptr))
 		complete((struct completion *)ptr);
@@ -472,7 +463,7 @@ static inline void syna_pal_completion_complete(syna_pal_completion_t *ptr)
  * return
  *    void.
  */
-static inline void syna_pal_completion_reset(syna_pal_completion_t *ptr)
+static inline void syna_pal_completion_reset(struct completion *ptr)
 {
 #if (KERNEL_VERSION(3, 13, 0) > LINUX_VERSION_CODE)
 		init_completion((struct completion *)ptr);
@@ -490,7 +481,7 @@ static inline void syna_pal_completion_reset(syna_pal_completion_t *ptr)
  * return
  *    0 if a signal is received; otherwise, on timeout or error occurs.
  */
-static inline int syna_pal_completion_wait_for(syna_pal_completion_t *ptr,
+static inline int syna_pal_completion_wait_for(struct completion *ptr,
 		unsigned int timeout_ms)
 {
 	int retval;
@@ -552,7 +543,7 @@ static inline void syna_pal_busy_delay_ms(int time_ms)
 	if (time_ms <= 0)
 		return;
 
-	mdelay(time_ms);
+	msleep(time_ms);
 }
 
 
@@ -616,7 +607,7 @@ static inline int syna_pal_str_cpy(char *dest, unsigned int dest_size,
 static inline int syna_pal_str_cmp(const char *str1, const char *str2,
 		unsigned int num)
 {
-	return strncmp(str1, str2, num);
+	return strcmp(str1, str2);
 }
 /*
  * Convert the given string in hex to an integer returned
