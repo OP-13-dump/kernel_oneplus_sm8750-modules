@@ -88,6 +88,7 @@ def define_canoe(t,v):
         modules = [
             "atmel_mxt_ts",
             "dummy_ts",
+            "focaltech_fts",
             "goodix_ts",
             "st_fts",
             "qts"
@@ -95,6 +96,7 @@ def define_canoe(t,v):
         config_options = [
             "TOUCH_DLKM_ENABLE",
             "CONFIG_ARCH_CANOE",
+            "CONFIG_TOUCH_FOCALTECH",
             "CONFIG_MSM_TOUCH",
             "CONFIG_TOUCHSCREEN_GOODIX_BRL",
             "CONFIG_TOUCHSCREEN_ATMEL_MXT",
@@ -143,28 +145,6 @@ def define_bengal(t,v):
             "CONFIG_MSM_TOUCH",
             "CONFIG_ARCH_BENGAL",
             "CONFIG_TOUCHSCREEN_SYNAPTICS_TCM",
-            "CONFIG_TOUCHSCREEN_DUMMY"
-        ],
-)
-
-def define_chora(t,v):
-    define_target_variant_modules(
-        target = t,
-        variant = v,
-        registry = touch_driver_modules,
-        modules = [
-            "dummy_ts",
-            "goodix_ts",
-            "focaltech_fts",
-            "qts"
-        ],
-        config_options = [
-            "TOUCH_DLKM_ENABLE",
-            "CONFIG_ARCH_CHORA",
-            "CONFIG_MSM_TOUCH",
-            "CONFIG_TOUCHSCREEN_GOODIX_BRL",
-            "CONFIG_TOUCH_FOCALTECH",
-            "CONFIG_QTS_ENABLE",
             "CONFIG_TOUCHSCREEN_DUMMY"
         ],
 )
@@ -335,8 +315,6 @@ def define_touch_target():
             define_canoevm(t, v)
         elif t == "canoe-oemvm":
             define_canoevm(t, v)
-        elif t == "chora":
-            define_chora(t, v)
         elif t == "sun":
             define_sun(t, v)
         elif t == "vienna":

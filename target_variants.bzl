@@ -3,7 +3,6 @@ targets = [
     "art",
     "bengal",
     "canoe",
-    "chora",
     "gen3auto",
     "malabar",
     "monaco",
