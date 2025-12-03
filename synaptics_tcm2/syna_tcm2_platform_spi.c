@@ -107,6 +107,39 @@ static int syna_spi_put_gpio(int gpio)
 
 	return 0;
 }
+
+#if (KERNEL_VERSION(6, 17, 0) > LINUX_VERSION_CODE)
+/*
+ * Config direction for a gpio
+ *
+ * param
+ *    [ in] gpio:   the target gpio
+ *    [ in] dir:    default direction of gpio
+ *    [ in] state:  default state of gpio
+ *
+ * return
+ *    0 in case of success, a negative value otherwise.
+ */
+static int syna_spi_config_gpio_direction(int gpio, int dir, int state)
+{
+	int retval;
+
+	if (dir == 0)
+		retval = gpio_direction_input(gpio);
+	else
+		retval = gpio_direction_output(gpio, state);
+
+	if (retval < 0) {
+		LOGE("Fail to config GPIO %d direction\n", gpio);
+		return retval;
+	}
+
+	LOGD("GPIO-%d direction configured as %s\n", gpio, (dir == 0) ? "input" : "output");
+
+	return 0;
+}
+#endif
+
 /*
  * Request a gpio and perform the requested setup
  *
@@ -120,7 +153,7 @@ static int syna_spi_put_gpio(int gpio)
  */
 static int syna_spi_get_gpio(int gpio, int dir, int state, char *label)
 {
-	int retval;
+	int retval, flags;
 #ifdef DEV_MANAGED_API
 	struct device *dev = syna_request_managed_device();
 #endif
@@ -141,29 +174,36 @@ static int syna_spi_get_gpio(int gpio, int dir, int state, char *label)
 		return -EINVAL;
 	}
 
+	if (dir == 0)
+		flags = GPIOF_IN;
+	else
+		flags = (state == 0) ? GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH;
+
+#if (KERNEL_VERSION(6, 16, 0) < LINUX_VERSION_CODE)
+	retval = devm_gpio_request_one(dev, gpio, flags, label);
+#else
 	retval = devm_gpio_request(dev, gpio, label);
-#else /* Legacy API */
-	retval = gpio_request(gpio, label);
-#endif
 	if (retval < 0) {
 		LOGE("Fail to request GPIO %d\n", gpio);
 		return retval;
 	}
+	retval = syna_spi_config_gpio_direction(gpio, dir, state);
+#endif
 
-	if (dir == 0)
-		retval = gpio_direction_input(gpio);
-	else
-		retval = gpio_direction_output(gpio, state);
-
+#else /* Legacy API */
+	retval = gpio_request(gpio, label);
 	if (retval < 0) {
-		LOGE("Fail to set GPIO %d direction\n", gpio);
+		LOGE("Fail to request GPIO %d\n", gpio);
 		return retval;
 	}
+	retval = syna_spi_config_gpio_direction(gpio, dir, state);
+#endif
 
 	LOGD("GPIO-%d requested\n", gpio);
 
-	return 0;
+	return retval;
 }
+
 /*
  * Release the regulator.
  * Be aware that the allocated devm-managed regulator will be released when device is released.
