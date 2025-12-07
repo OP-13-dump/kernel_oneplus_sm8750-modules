@@ -8,7 +8,7 @@ ccflags-y += -I$(PWATOP)/core/common/
 include $(PWATOP)/core/common/Kbuild
 ccflags-y += -I$(PWATOP)/core/iris7p/
 include $(PWATOP)/core/iris7p/Kbuild
-ccflags-y += -I$(PWATOP)/core/iris8/
-include $(PWATOP)/core/iris8/Kbuild
+# ccflags-y += -I$(PWATOP)/core/iris8/
+# include $(PWATOP)/core/iris8/Kbuild
 
 endif

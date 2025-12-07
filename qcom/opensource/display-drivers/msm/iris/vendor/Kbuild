@@ -9,7 +9,7 @@ ccflags-y += -I$(PWATOP)/vendor/common/
 include $(PWATOP)/vendor/common/Kbuild
 ccflags-y += -I$(PWATOP)/vendor/iris7p/
 include $(PWATOP)/vendor/iris7p/Kbuild
-ccflags-y += -I$(PWATOP)/vendor/iris8/
-include $(PWATOP)/vendor/iris8/Kbuild
+# ccflags-y += -I$(PWATOP)/vendor/iris8/
+# include $(PWATOP)/vendor/iris8/Kbuild
 
 endif

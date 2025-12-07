@@ -22,7 +22,7 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRISM_KROOT)/pw_iris_common.o \
 	$(IRISM_KROOT)/pw_iris_cmpt_fpga.o \
 	$(IRISM_KROOT)/pw_iris_memc_helper.o
 
-pw_iris-y += $(IRISM_KROOT)/pw_iris_drv.o
+msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRISM_KROOT)/pw_iris_drv.o
 
 ccflags-y += -DCONFIG_PXLW_IRIS
 ccflags-y += -DPXLW_IRIS_DUAL

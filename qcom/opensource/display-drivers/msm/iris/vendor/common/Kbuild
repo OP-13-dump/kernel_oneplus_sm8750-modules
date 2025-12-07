@@ -20,7 +20,7 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRIS_KROOT)/dsi_iris_cmpt_8650.o
 endif
 
 ifeq ($(CONFIG_ARCH_SUN), y)
-msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRIS_KROOT)/dsi_iris_cmpt_8750.o
+msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRIS_KROOT)/dsi_iris_cmpt_7750.o
 endif
 
 msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRIS_KROOT)/dsi_iris_lightup.o \

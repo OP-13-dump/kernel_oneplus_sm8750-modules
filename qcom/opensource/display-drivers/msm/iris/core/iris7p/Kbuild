@@ -11,4 +11,5 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += $(IRISM_KROOT_I7P)/pw_iris_lut.o \
 				$(IRISM_KROOT_I7P)/pw_iris_dbg.o \
 				$(IRISM_KROOT_I7P)/pw_iris_pq.o \
 				$(IRISM_KROOT_I7P)/pw_iris_ioctl.o \
+				$(IRISM_KROOT_I7P)/pw_iris_drv_i7p.o \
 				$(IRISM_KROOT_I7P)/pw_iris_lightup.o
