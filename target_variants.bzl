@@ -7,6 +7,7 @@ targets = [
     "gen3auto",
     "hamoa",
     "lahaina",
+    "bengal",
     "pineapple",
     "parrot",
     "seraph",
@@ -23,16 +24,19 @@ la_variants = [
 
 le_targets = [
     # keep sorted
+    "alor-le",
     "sun-allyes",
 ]
 
 le_32_targets = [
     # keep sorted
     "sa510m",
+    "sa510m.1g",
 ]
 
 le_variants = [
     # keep sorted
+    "debug-defconfig",
     "perf-defconfig",
 ]
 

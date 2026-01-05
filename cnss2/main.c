@@ -6813,8 +6813,15 @@ static void cnss_read_tsf_irq_ts(struct cnss_wlan_tsf_info *tsf_info)
 	if (!data_val)
 		return;
 
+	if (data_val * 10 < data_val) {
+		do_div(data_val, TIME_CLOCK_FREQ_HZ / 100000);
+		tsf_info->host_time_us = data_val * 10;
+		return;
+	}
+
+	data_val = data_val * 10;
 	do_div(data_val, TIME_CLOCK_FREQ_HZ / 100000);
-	tsf_info->host_time_us = data_val * 10;
+	tsf_info->host_time_us = data_val;
 }
 
 static irqreturn_t cnss_wlan_tsf_capture_threaded_handler(int irq, void *ctx)
@@ -7152,6 +7159,14 @@ cnss_use_nv_mac(struct cnss_plat_data *plat_priv)
 {
 	return of_property_read_bool(plat_priv->plat_dev->dev.of_node,
 				     "use-nv-mac");
+}
+
+static void cnss_get_rc_pm_control_info(struct cnss_plat_data *plat_priv)
+{
+	plat_priv->rc_pm_control =
+		of_property_read_bool(plat_priv->plat_dev->dev.of_node,
+				      "wlan-rc-pm-control");
+	cnss_pr_dbg("rc_pm_control: %d\n", plat_priv->rc_pm_control);
 }
 
 static int cnss_get_dev_cfg_node(struct cnss_plat_data *plat_priv)
@@ -7650,6 +7665,7 @@ static int cnss_probe(struct platform_device *plat_dev)
 
 	plat_priv->bus_type = cnss_get_bus_type(plat_priv);
 	plat_priv->use_nv_mac = cnss_use_nv_mac(plat_priv);
+	cnss_get_rc_pm_control_info(plat_priv);
 	cnss_set_plat_priv(plat_dev, plat_priv);
 	cnss_set_device_name(plat_priv);
 	platform_set_drvdata(plat_dev, plat_priv);
