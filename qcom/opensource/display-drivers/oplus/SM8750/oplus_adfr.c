@@ -208,6 +208,15 @@ int oplus_adfr_init(void *dsi_panel)
 	}
 
 	if (oplus_adfr_is_supported(p_oplus_adfr_params)) {
+		/* AOSP has no "Smart Adaptive" userspace, so the ADFR min fps
+		 * property is never set and sa_min_fps would stay 0. Self-drive it:
+		 * the idle-mode machinery only engages when sa_min_fps is >= the
+		 * mapping-table minimum (1), then drops the DDIC to that floor in
+		 * mipi idle. Mirror the CONNECTOR_PROP_ADFR_MIN_FPS kickstart here
+		 * so no userspace involvement is needed. */
+		p_oplus_adfr_params->sa_min_fps = 1;
+		p_oplus_adfr_params->sa_min_fps_updated = true;
+
 		/* oplus,adfr-test-te-gpio */
 		p_oplus_adfr_params->test_te.gpio = utils->get_named_gpio(utils->data, "oplus,adfr-test-te-gpio", 0);
 		if (!gpio_is_valid(p_oplus_adfr_params->test_te.gpio)) {
@@ -1431,7 +1440,29 @@ static int oplus_adfr_min_fps_check(void *dsi_panel, unsigned int min_fps)
 
 	return min_fps;
 #else
-	return 1;
+	struct oplus_adfr_params *p_oplus_adfr_params = oplus_adfr_get_params(panel);
+	if (!p_oplus_adfr_params) {
+		ADFR_ERR("invalid p_oplus_adfr_params param\n");
+		return -EINVAL;
+	}
+
+	if (!panel->cur_mode || !panel->cur_mode->priv_info) {
+		ADFR_ERR("invalid cur_mode params\n");
+		return -EINVAL;
+	}
+
+	/* AOSP self-drive: keep the oplus,adfr-idle-off-min-fps active floor and
+	 * only drop to the table minimum (1) once the encoder is in mipi idle. */
+	if (oplus_adfr_idle_mode_is_enabled(p_oplus_adfr_params)
+			&& (p_oplus_adfr_params->auto_mode == OPLUS_ADFR_AUTO_OFF)
+			&& (p_oplus_adfr_params->idle_mode == OPLUS_ADFR_IDLE_OFF)
+			&& (min_fps < panel->cur_mode->priv_info->oplus_adfr_idle_off_min_fps)) {
+		min_fps = panel->cur_mode->priv_info->oplus_adfr_idle_off_min_fps;
+	}
+
+	ADFR_DEBUG("min fps is %u after check\n", min_fps);
+
+	return min_fps;
 #endif
 }
 
@@ -1802,8 +1833,13 @@ int oplus_adfr_status_reset(void *dsi_panel)
 		ADFR_DEBUG("oplus_adfr_need_filter_auto_on_cmd:%d\n", p_oplus_adfr_params->need_filter_auto_on_cmd);
 		OPLUS_ADFR_TRACE_INT("oplus_adfr_need_filter_auto_on_cmd", p_oplus_adfr_params->need_filter_auto_on_cmd);
 
-		p_oplus_adfr_params->sa_min_fps = refresh_rate;
-		p_oplus_adfr_params->sa_min_fps_updated = false;
+		/* AOSP: no SA userspace re-arms min fps after panel on / timing
+		 * switch, so keep self-driving it (min fps 1, see oplus_adfr_init)
+		 * instead of reverting to the timing refresh rate, which would
+		 * leave the idle-mode machinery disarmed (sa_min_fps >= 20 fails
+		 * the idle gate) until the next userspace property write. */
+		p_oplus_adfr_params->sa_min_fps = 1;
+		p_oplus_adfr_params->sa_min_fps_updated = true;
 		if (oplus_adfr_high_precision_sa_mode_is_enabled(p_oplus_adfr_params)) {
 			p_oplus_adfr_params->sa_high_precision_fps_updated = false;
 		}
@@ -4697,6 +4733,12 @@ ssize_t oplus_adfr_set_min_fps_attr(struct kobject *obj,
 	OPLUS_ADFR_TRACE_BEGIN("oplus_adfr_set_min_fps_attr");
 
 	sscanf(buf, "%u", &minfps);
+	/* "0" means auto on this ROM: self-refresh drops to the table minimum
+	 * (1Hz) in mipi idle with the active floor clamped by
+	 * oplus,adfr-idle-off-min-fps. Store 1 so the idle-mode gate
+	 * (sa_min_fps >= mapping-table minimum) can engage. */
+	if (minfps == 0)
+		minfps = 1;
 
 	h_skew = display->panel->cur_mode->timing.h_skew;
 	if (h_skew == STANDARD_ADFR || h_skew == STANDARD_MFR) {
