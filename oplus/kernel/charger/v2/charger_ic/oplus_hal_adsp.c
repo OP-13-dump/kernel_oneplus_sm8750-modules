@@ -1389,6 +1389,15 @@ static void oplus_unsuspend_usb_work(struct work_struct *work)
 	oplus_chg_suspend_charger(false, DEF_VOTER);
 }
 
+#define GAMESIR_X3_PRO_5V_PDO 0x3E0190C8
+#define GAMESIR_X3_PRO_9V_PDO 0x0002D096
+
+static bool oplus_is_gamesir_x3_pro_pd_source(struct battery_chg_dev *bcdev)
+{
+	return bcdev->pdo[0].pdo_data == GAMESIR_X3_PRO_5V_PDO &&
+		bcdev->pdo[1].pdo_data == GAMESIR_X3_PRO_9V_PDO;
+}
+
 static int oplus_get_max_current_from_fixed_pdo(struct battery_chg_dev *bcdev, int volt)
 {
 	int i = 0;
@@ -1614,6 +1623,18 @@ static void oplus_sourcecap_done_work(struct work_struct *work)
 		chg_err("get pdo info error\n");
 		return;
 	}
+	/*
+	 * The X3 Pro is a USB data-capable PD source, so the lower charging
+	 * stack initially reports it as PD_SDP.  Once its complete SourceCaps
+	 * (5V/2A + 9V/1.5A) are available, re-run charger-type evaluation so
+	 * the charging framework can apply the X3 Pro PD quirk below.
+	 */
+	if (oplus_is_gamesir_x3_pro_pd_source(bcdev)) {
+		chg_info("GameSir X3 Pro 5V/2A + 9V/1.5A SourceCaps detected\n");
+		oplus_chg_ic_virq_trigger(bcdev->buck_ic,
+					  OPLUS_IC_VIRQ_CHG_TYPE_CHANGE);
+	}
+
 	/*set default input current from pdo*/
 	max_pdo_current = oplus_get_max_current_from_fixed_pdo(bcdev, OPLUS_PD_5V);
 	if (max_pdo_current >= 0)
@@ -8313,7 +8334,18 @@ static int oplus_chg_8350_get_charger_type(struct oplus_chg_ic_dev *ic_dev, int 
 		*type = OPLUS_CHG_USB_TYPE_PD_PPS;
 		break;
 	case POWER_SUPPLY_USB_TYPE_PD_SDP:
-		*type = OPLUS_CHG_USB_TYPE_PD_SDP;
+		/*
+		 * Keep the raw USB/PD classification untouched for data-role
+		 * handling, but expose the X3 Pro as normal PD to OPLUS charging
+		 * policy.  Otherwise PD_SDP is forced into DCP mode and the 9V
+		 * fixed-PDO boost path is never entered.
+		 */
+		if (oplus_is_gamesir_x3_pro_pd_source(bcdev)) {
+			*type = OPLUS_CHG_USB_TYPE_PD;
+			chg_info("GameSir X3 Pro PD_SDP charging quirk: report as PD\n");
+		} else {
+			*type = OPLUS_CHG_USB_TYPE_PD_SDP;
+		}
 		break;
 	case POWER_SUPPLY_USB_TYPE_APPLE_BRICK_ID:
 		*type = OPLUS_CHG_USB_TYPE_DCP;
