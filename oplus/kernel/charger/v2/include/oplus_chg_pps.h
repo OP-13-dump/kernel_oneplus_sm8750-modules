@@ -111,6 +111,18 @@ enum pps_user_err_type {
 	PPS_ERR_MAX,
 };
 
+enum oplus_user_pd_mode {
+	OPLUS_USER_PD_AUTO = 0,
+	OPLUS_USER_PD_FIXED,
+	OPLUS_USER_PD_5V_ONLY,
+	OPLUS_USER_PD_MODE_MAX,
+};
+
+int oplus_pps_get_user_pd_mode(void);
+int oplus_pps_set_user_pd_mode(int mode);
+int oplus_pps_get_user_pd_contract(int *mv, int *ma);
+int oplus_pps_get_user_pd_available_power_mw(void);
+
 int oplus_pps_current_to_level(struct oplus_mms *mms, int ibus_curr);
 int oplus_pps_get_charging_power_watt(struct oplus_mms *mms);
 int oplus_pps_get_adapter_power_mw(struct oplus_mms *mms);

@@ -36,6 +36,7 @@
 #include <oplus_chg_monitor.h>
 #include <oplus_chg_vooc.h>
 #include <oplus_mms_wired.h>
+#include <oplus_chg_wired.h>
 #include <oplus_chg_pps.h>
 #include <oplus_batt_bal.h>
 #include <oplus_chg_state_retention.h>
@@ -426,6 +427,12 @@ struct oplus_pps {
 	bool ss_check;
 	bool fcl_trigger;
 };
+
+/* User-selectable USB-PD policy exposed through Oplus configfs/Dodge Hub. */
+static struct oplus_pps *g_oplus_pps;
+static int g_user_pd_mode = OPLUS_USER_PD_AUTO;
+static int g_user_pd_contract_mv;
+static int g_user_pd_contract_ma;
 
 struct current_level {
 	int level;
@@ -1720,6 +1727,198 @@ static void oplus_pps_soft_exit(struct oplus_pps *chip)
 		vote(chip->wired_suspend_votable, PPS_VOTER, false, 0, false);
 }
 
+int oplus_pps_get_user_pd_mode(void)
+{
+	return READ_ONCE(g_user_pd_mode);
+}
+EXPORT_SYMBOL_GPL(oplus_pps_get_user_pd_mode);
+
+int oplus_pps_get_user_pd_contract(int *mv, int *ma)
+{
+	struct oplus_pps *chip = READ_ONCE(g_oplus_pps);
+	union mms_msg_data data = { 0 };
+	int mode = READ_ONCE(g_user_pd_mode);
+	int rc;
+
+	if (!mv || !ma)
+		return -EINVAL;
+	*mv = 0;
+	*ma = 0;
+	if (!chip || !chip->wired_online)
+		return -ENODEV;
+
+	if (chip->wired_type != OPLUS_CHG_USB_TYPE_PD &&
+	    chip->wired_type != OPLUS_CHG_USB_TYPE_PD_DRP &&
+	    chip->wired_type != OPLUS_CHG_USB_TYPE_PD_PPS)
+		return -ENODATA;
+
+	if (mode == OPLUS_USER_PD_5V_ONLY) {
+		u32 pdo[PPS_PDO_MAX] = { 0 };
+		int i;
+
+		*mv = 5000;
+		*ma = 3000;
+		if (chip->pps_ic && oplus_pps_get_pdo_info(chip, pdo, PPS_PDO_MAX) >= 0) {
+			for (i = 0; i < PPS_PDO_MAX; i++) {
+				u32 raw = pdo[i];
+				if ((raw >> 30) == USBPD_PDMSG_PDOTYPE_FIXED_SUPPLY) {
+					int pdo_mv = ((raw >> 10) & 0x3ff) * 50;
+					int pdo_ma = (raw & 0x3ff) * 10;
+					if (pdo_mv == 5000 && pdo_ma > 0) {
+						*ma = pdo_ma;
+						break;
+					}
+				}
+			}
+		} else if (chip->wired_topic) {
+			rc = oplus_mms_get_item_data(chip->wired_topic,
+				WIRED_ITEM_CHARGER_CURR_MAX, &data, true);
+			if (rc >= 0 && data.intval > 0)
+				*ma = data.intval;
+		}
+		return 0;
+	}
+
+	if (mode != OPLUS_USER_PD_AUTO && g_user_pd_contract_mv > 0) {
+		*mv = READ_ONCE(g_user_pd_contract_mv);
+		*ma = READ_ONCE(g_user_pd_contract_ma);
+		return 0;
+	}
+
+	if (chip->pps_online && chip->vol_set_mv > 0 && chip->curr_set_ma > 0) {
+		*mv = chip->vol_set_mv;
+		*ma = chip->curr_set_ma;
+		return 0;
+	}
+
+	/* For ordinary fixed-PD in Automatic mode, use live VBUS plus the
+	 * wired layer's negotiated/allowed current. This is preferable to
+	 * presenting the charger's advertised maximum as the active contract.
+	 */
+	*mv = oplus_wired_get_vbus();
+	if (chip->wired_topic) {
+		rc = oplus_mms_get_item_data(chip->wired_topic,
+			WIRED_ITEM_CHARGER_CURR_MAX, &data, true);
+		if (rc >= 0)
+			*ma = data.intval;
+	}
+	return (*mv > 0 && *ma > 0) ? 0 : -ENODATA;
+}
+EXPORT_SYMBOL_GPL(oplus_pps_get_user_pd_contract);
+
+int oplus_pps_get_user_pd_available_power_mw(void)
+{
+	struct oplus_pps *chip = READ_ONCE(g_oplus_pps);
+	u32 pdo[PPS_PDO_MAX] = { 0 };
+	int rc, i, max_power_mw = 0;
+
+	if (!chip || !chip->wired_online || !chip->pps_ic)
+		return 0;
+	if (chip->wired_type != OPLUS_CHG_USB_TYPE_PD &&
+	    chip->wired_type != OPLUS_CHG_USB_TYPE_PD_DRP &&
+	    chip->wired_type != OPLUS_CHG_USB_TYPE_PD_PPS)
+		return 0;
+
+	rc = oplus_pps_get_pdo_info(chip, pdo, PPS_PDO_MAX);
+	if (rc < 0)
+		return 0;
+
+	for (i = 0; i < PPS_PDO_MAX; i++) {
+		u32 raw = pdo[i];
+		u32 type = raw >> 30;
+		int mv = 0, ma = 0, power_mw;
+
+		if (!raw)
+			continue;
+		if (type == USBPD_PDMSG_PDOTYPE_FIXED_SUPPLY) {
+			mv = ((raw >> 10) & 0x3ff) * 50;
+			ma = (raw & 0x3ff) * 10;
+		} else if (type == USBPD_PDMSG_PDOTYPE_AUGMENTED) {
+			mv = ((raw >> 17) & 0xff) * 100;
+			ma = (raw & 0xff) * 50;
+		}
+		if (mv <= 0 || ma <= 0)
+			continue;
+		power_mw = mv * ma / 1000;
+		if (power_mw > max_power_mw)
+			max_power_mw = power_mw;
+	}
+	return max_power_mw;
+}
+EXPORT_SYMBOL_GPL(oplus_pps_get_user_pd_available_power_mw);
+
+int oplus_pps_set_user_pd_mode(int mode)
+{
+	struct oplus_pps *chip = READ_ONCE(g_oplus_pps);
+	int rc = 0;
+	int target_mv;
+
+	if (mode < OPLUS_USER_PD_AUTO || mode >= OPLUS_USER_PD_MODE_MAX)
+		return -EINVAL;
+
+	WRITE_ONCE(g_user_pd_mode, mode);
+	WRITE_ONCE(g_user_pd_contract_mv, 0);
+	WRITE_ONCE(g_user_pd_contract_ma, 0);
+
+	if (!chip)
+		return 0;
+
+	if (chip->cpa_topic) {
+		if (mode == OPLUS_USER_PD_AUTO)
+			oplus_cpa_protocol_enable(chip->cpa_topic, CHG_PROTOCOL_PPS);
+		else
+			oplus_cpa_protocol_disable(chip->cpa_topic, CHG_PROTOCOL_PPS);
+	}
+
+	if (mode == OPLUS_USER_PD_AUTO) {
+		/* Give protocol arbitration back to Oplus immediately. If the
+		 * attached source is PPS-capable, CPA can renegotiate without a
+		 * physical replug.
+		 */
+		oplus_wired_pd_mode_changed(mode);
+		if (chip->wired_online && chip->cpa_topic &&
+		    chip->wired_type == OPLUS_CHG_USB_TYPE_PD_PPS &&
+		    (!chip->pps_boot_votable ||
+		     !get_effective_result(chip->pps_boot_votable)))
+			oplus_cpa_request(chip->cpa_topic, CHG_PROTOCOL_PPS);
+		return 0;
+	}
+
+	/* Leave PPS cleanly before requesting a fixed PDO. force_exit() also
+	 * returns DP/DM to the AP and tears down the charge-pump PPS session.
+	 */
+	if (chip->pps_online || chip->pps_charging)
+		oplus_pps_force_exit(chip);
+
+	oplus_wired_pd_mode_changed(mode);
+
+	if (!chip->wired_online || !chip->pps_ic) {
+		if (mode == OPLUS_USER_PD_5V_ONLY) {
+			WRITE_ONCE(g_user_pd_contract_mv, 5000);
+			WRITE_ONCE(g_user_pd_contract_ma, OPLUS_FIXED_PDO_CURR_MA);
+		}
+		return 0;
+	}
+
+	target_mv = (mode == OPLUS_USER_PD_5V_ONLY) ? 5000 : 9000;
+	rc = oplus_chg_ic_func(chip->pps_ic, OPLUS_IC_FUNC_FIXED_PDO_SET,
+			target_mv, OPLUS_FIXED_PDO_CURR_MA);
+	if (rc < 0 && mode == OPLUS_USER_PD_FIXED) {
+		/* 9 V is preferred for Fixed PD. A standards-compliant source may
+		 * omit it, so fall back to the mandatory 5 V fixed PDO.
+		 */
+		target_mv = 5000;
+		rc = oplus_chg_ic_func(chip->pps_ic, OPLUS_IC_FUNC_FIXED_PDO_SET,
+				target_mv, OPLUS_FIXED_PDO_CURR_MA);
+	}
+	if (rc >= 0 || mode == OPLUS_USER_PD_5V_ONLY) {
+		WRITE_ONCE(g_user_pd_contract_mv, target_mv);
+		WRITE_ONCE(g_user_pd_contract_ma, OPLUS_FIXED_PDO_CURR_MA);
+	}
+	return rc;
+}
+EXPORT_SYMBOL_GPL(oplus_pps_set_user_pd_mode);
+
 static void oplus_pps_sub_btb_connnect_check(struct oplus_pps *chip)
 {
 	int btb_abnormal_current = 0;
@@ -1765,6 +1964,17 @@ static void oplus_pps_switch_check_work(struct work_struct *work)
 	int wired_type;
 	int local_time_ms;
 	int delta_time;
+
+	/* Fixed-PD and 5V-only modes make PPS ineligible until the user
+	 * explicitly returns to Automatic. Keep this at the central PPS
+	 * entry point so recovery/retry paths cannot bypass the policy.
+	 */
+	if (READ_ONCE(g_user_pd_mode) != OPLUS_USER_PD_AUTO) {
+		chg_info("PPS blocked by user PD mode=%d\n", READ_ONCE(g_user_pd_mode));
+		if (chip->cpa_topic)
+			oplus_cpa_switch_end(chip->cpa_topic, CHG_PROTOCOL_PPS);
+		return;
+	}
 
 	rc = oplus_cpa_switch_start(chip->cpa_topic, CHG_PROTOCOL_PPS);
 	if (rc < 0) {
@@ -3906,6 +4116,7 @@ static void oplus_pps_type_change_work(struct work_struct *work)
 	if (chip->wired_type != wired_type && !chip->retention_state) {
 		/* get pps type first time and support pps and pps ready, request pps */
 		if (wired_type == OPLUS_CHG_USB_TYPE_PD_PPS &&
+		    READ_ONCE(g_user_pd_mode) == OPLUS_USER_PD_AUTO &&
 		    !get_effective_result(chip->pps_boot_votable))
 			oplus_cpa_request(chip->cpa_topic, CHG_PROTOCOL_PPS);
 		chip->wired_type = wired_type;
@@ -6135,6 +6346,7 @@ static int oplus_pps_probe(struct platform_device *pdev)
 	chip->debug_force_pps_err = 0;
 
 	oplus_pps_track_debugfs_init(chip);
+	WRITE_ONCE(g_oplus_pps, chip);
 
 	return 0;
 
@@ -6169,6 +6381,9 @@ static int oplus_pps_remove(struct platform_device *pdev)
 #endif
 {
 	struct oplus_pps *chip = platform_get_drvdata(pdev);
+
+	if (READ_ONCE(g_oplus_pps) == chip)
+		WRITE_ONCE(g_oplus_pps, NULL);
 
 	if (chip->pps_ic)
 		oplus_pps_virq_unreg(chip);

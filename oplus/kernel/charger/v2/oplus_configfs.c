@@ -2632,6 +2632,146 @@ static ssize_t get_three_level_term_volt_show(
 }
 DEVICE_ATTR_RO(get_three_level_term_volt);
 
+static ssize_t pd_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", oplus_pps_get_user_pd_mode());
+}
+
+static ssize_t pd_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+	int rc;
+
+	if (kstrtoint(buf, 0, &mode))
+		return -EINVAL;
+	rc = oplus_pps_set_user_pd_mode(mode);
+	if (rc < 0)
+		return rc;
+	return count;
+}
+static DEVICE_ATTR_RW(pd_mode);
+
+static ssize_t pd_contract_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int mv = 0, ma = 0;
+
+	if (oplus_pps_get_user_pd_contract(&mv, &ma) < 0)
+		return sprintf(buf, "0 0\n");
+	return sprintf(buf, "%d %d\n", mv, ma);
+}
+static DEVICE_ATTR_RO(pd_contract);
+
+static ssize_t pd_available_power_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", oplus_pps_get_user_pd_available_power_mw());
+}
+static DEVICE_ATTR_RO(pd_available_power);
+
+static ssize_t charger_protocol_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct oplus_configfs_device *chip = dev->driver_data;
+	int mode = oplus_pps_get_user_pd_mode();
+	int type;
+
+	if (!chip || !chip->wired_online)
+		return sprintf(buf, "Not connected\n");
+
+	if (chip->ufcs_online)
+		return sprintf(buf, "UFCS\n");
+	if (chip->vooc_online || chip->vooc_online_keep) {
+		if (sid_to_adapter_chg_type(chip->vooc_sid) == CHARGER_TYPE_VOOC)
+			return sprintf(buf, "VOOC\n");
+		return sprintf(buf, "SUPERVOOC\n");
+	}
+	if ((chip->pps_online || chip->pps_online_keep) &&
+	    mode == OPLUS_USER_PD_AUTO)
+		return sprintf(buf, "USB PD · PPS\n");
+
+	type = chip->wired_type;
+	switch (type) {
+	case OPLUS_CHG_USB_TYPE_PD_PPS:
+	case OPLUS_CHG_USB_TYPE_PD:
+	case OPLUS_CHG_USB_TYPE_PD_DRP:
+		if (mode == OPLUS_USER_PD_5V_ONLY)
+			return sprintf(buf, "USB PD · 5V\n");
+		return sprintf(buf, "USB PD · Fixed\n");
+	case OPLUS_CHG_USB_TYPE_QC2:
+		return sprintf(buf, "Quick Charge 2\n");
+	case OPLUS_CHG_USB_TYPE_QC3:
+		return sprintf(buf, "Quick Charge 3\n");
+	case OPLUS_CHG_USB_TYPE_SVOOC:
+		return sprintf(buf, "SUPERVOOC\n");
+	case OPLUS_CHG_USB_TYPE_VOOC:
+		return sprintf(buf, "VOOC\n");
+	case OPLUS_CHG_USB_TYPE_DCP:
+		return sprintf(buf, "USB DCP\n");
+	case OPLUS_CHG_USB_TYPE_CDP:
+		return sprintf(buf, "USB CDP\n");
+	case OPLUS_CHG_USB_TYPE_SDP:
+		return sprintf(buf, "USB SDP\n");
+	case OPLUS_CHG_USB_TYPE_C:
+		return sprintf(buf, "USB Type-C\n");
+	default:
+		return sprintf(buf, "%s\n", oplus_wired_get_chg_type_str(type));
+	}
+}
+static DEVICE_ATTR_RO(charger_protocol);
+
+static ssize_t charging_input_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct oplus_configfs_device *chip = dev->driver_data;
+	int vbus_mv, ibus_ma;
+	int batt_ma, batt_mv, batt_num;
+
+	if (!chip || !chip->wired_online)
+		return sprintf(buf, "0 0\n");
+
+	vbus_mv = oplus_wired_get_vbus();
+	ibus_ma = oplus_wired_get_ibus();
+
+	if (ibus_ma < 50) {
+		batt_ma = oplus_gauge_get_batt_current();
+		if (batt_ma < -50) {
+			int chg_ma = -batt_ma;
+			if (chip->vooc_online || chip->vooc_online_keep) {
+				/* SuperVOOC / VOOC direct series charging */
+				ibus_ma = chg_ma;
+				if (vbus_mv <= 0)
+					vbus_mv = (sid_to_adapter_chg_type(chip->vooc_sid) == CHARGER_TYPE_VOOC) ? 5000 : 10000;
+			} else {
+				/* Buck charging fallback: Pin = Pbatt / 0.90 */
+				batt_mv = oplus_gauge_get_batt_mvolts();
+				batt_num = oplus_gauge_get_batt_num();
+				if (batt_num < 1)
+					batt_num = 1;
+				if (vbus_mv <= 0)
+					vbus_mv = 5000;
+				ibus_ma = (int)(((long long)batt_mv * batt_num * chg_ma * 100ULL) /
+						((long long)vbus_mv * 90ULL));
+			}
+		}
+	}
+
+	if (vbus_mv <= 0 && chip->wired_online)
+		vbus_mv = 5000;
+
+	return sprintf(buf, "%d %d\n", vbus_mv, ibus_ma);
+}
+static DEVICE_ATTR_RO(charging_input);
+
+static ssize_t battery_current_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", oplus_gauge_get_batt_current());
+}
+static DEVICE_ATTR_RO(battery_current);
+
 static struct device_attribute *oplus_battery_attributes[] = {
 	&dev_attr_authenticate,
 	&dev_attr_battery_cc,
@@ -2651,6 +2791,12 @@ static struct device_attribute *oplus_battery_attributes[] = {
 #endif
 	&dev_attr_fast_charge,
 	&dev_attr_mmi_charging_enable,
+	&dev_attr_pd_mode,
+	&dev_attr_pd_contract,
+	&dev_attr_pd_available_power,
+	&dev_attr_charger_protocol,
+	&dev_attr_charging_input,
+	&dev_attr_battery_current,
 	&dev_attr_battery_notify_code,
 #ifdef CONFIG_OPLUS_SHIP_MODE_SUPPORT
 	&dev_attr_ship_mode,

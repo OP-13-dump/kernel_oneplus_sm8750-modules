@@ -8509,6 +8509,10 @@ static int oplus_chg_8350_set_qc_config(struct oplus_chg_ic_dev *ic_dev, enum op
 	return rc;
 }
 
+#ifndef OPLUS_PD_5V_PDO
+#define OPLUS_PD_5V_PDO 0x31912c
+#endif
+
 static int oplus_chg_8350_set_pd_config(struct oplus_chg_ic_dev *ic_dev, u32 pdo)
 {
 	struct battery_chg_dev *bcdev;
@@ -8525,7 +8529,12 @@ static int oplus_chg_8350_set_pd_config(struct oplus_chg_ic_dev *ic_dev, u32 pdo
 
 	switch (PD_SRC_PDO_TYPE(pdo)) {
 	case PD_SRC_PDO_TYPE_FIXED:
-		vol_mv = PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50;
+		if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY) {
+			pdo = OPLUS_PD_5V_PDO;
+			vol_mv = OPLUS_PD_5V;
+		} else {
+			vol_mv = PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50;
+		}
 		if (vol_mv != OPLUS_PD_5V && vol_mv != OPLUS_PD_9V && vol_mv != OPLUS_PD_12V) {
 			chg_err("Unsupported pd voltage(=%d)\n", vol_mv);
 			return -EINVAL;
@@ -12460,6 +12469,16 @@ static int oplus_pps_get_authentiate(struct oplus_chg_ic_dev *ic_dev) {
 static int oplus_chg_set_pps_config(struct oplus_chg_ic_dev *ic_dev, int vbus_mv, int ibus_ma)
 {
 	int rc1, rc2 = 0;
+
+	/* Belt-and-suspenders enforcement below CPA: a PD hard reset or any
+	 * backend-local retry must not re-enter PPS while the user selected
+	 * Fixed PD or 5V only.
+	 */
+	if (oplus_pps_get_user_pd_mode() != OPLUS_USER_PD_AUTO) {
+		chg_info("reject PPS request while user PD mode=%d\n",
+			oplus_pps_get_user_pd_mode());
+		return -EPERM;
+	}
 	struct psy_state *pst = NULL;
 	struct battery_chg_dev *bcdev;
 
@@ -12492,6 +12511,12 @@ static int oplus_chg_set_pps_config(struct oplus_chg_ic_dev *ic_dev, int vbus_mv
 static int oplus_chg_set_fixed_pd_config(struct oplus_chg_ic_dev *ic_dev, int vol_mv, int curr_ma)
 {
 	int rc = 0;
+
+	/* 5V-only is a persistent policy, not a one-shot request. Force every
+	 * fixed-PDO renegotiation through VSAFE5V until the user changes mode.
+	 */
+	if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY)
+		vol_mv = OPLUS_PD_5V;
 
 #define OPLUS_PD_5V_PDO 0x31912c
 #define OPLUS_PD_9V_PDO 0x32d12c

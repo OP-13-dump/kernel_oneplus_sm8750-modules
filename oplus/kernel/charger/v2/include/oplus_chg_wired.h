@@ -37,4 +37,6 @@ enum oplus_wired_vbus_status {
 	VBUS_STS_12V_POST_ERR,
 };
 
+void oplus_wired_pd_mode_changed(int mode);
+
 #endif /* __OPLUS_CHG_WIRED_H__ */

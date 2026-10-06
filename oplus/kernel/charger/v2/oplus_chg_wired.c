@@ -36,6 +36,7 @@
 #include <oplus_strategy.h>
 #include <oplus_chg_vooc.h>
 #include <oplus_chg_wired.h>
+#include <oplus_chg_pps.h>
 #include <oplus_chg_cpa.h>
 #include <oplus_chg_state_retention.h>
 #if IS_ENABLED(CONFIG_OPLUS_DYNAMIC_CONFIG_CHARGER)
@@ -44,6 +45,8 @@
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 #include <mt-plat/mtk_boot_common.h>
 #endif
+
+static struct oplus_chg_wired *g_oplus_wired;
 
 
 #define PDQC_CONFIG_WAIT_TIME_MS	15000
@@ -710,7 +713,12 @@ static void oplus_wired_chg_pdqc_boost_action(struct oplus_chg_wired *chip)
 		break;
 	case OPLUS_WIRED_CHG_MODE_PD:
 	case OPLUS_WIRED_CHG_MODE_PD12V:
-		chip->pd_action = OPLUS_ACTION_BOOST;
+		if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY) {
+			chip->pd_action = (chip->vbus_mv > PDQC_BUCK_VBUS_THR) ?
+				OPLUS_ACTION_BUCK : OPLUS_ACTION_NULL;
+		} else {
+			chip->pd_action = OPLUS_ACTION_BOOST;
+		}
 		schedule_delayed_work(&chip->pd_config_work, 0);
 		break;
 	default:
@@ -1106,6 +1114,16 @@ static void oplus_wired_pd_config_work(struct work_struct *work)
 	}
 
 	chip->vbus_mv = oplus_wired_get_vbus();
+	if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY &&
+	    chip->pd_action == OPLUS_ACTION_BOOST) {
+		chip->pd_action = (chip->vbus_mv > PDQC_BUCK_VBUS_THR) ?
+			OPLUS_ACTION_BUCK : OPLUS_ACTION_NULL;
+		if (chip->pd_action == OPLUS_ACTION_NULL) {
+			chip->vbus_set_mv = OPLUS_CHG_VBUS_5V;
+			oplus_wired_set_vbus_vol_type(chip, OPLUS_VBUS_5V);
+			goto set_curr;
+		}
+	}
 	switch (chip->pd_action) {
 	case OPLUS_ACTION_BOOST:
 		if (is_pd_svooc_votable_available(chip) &&
@@ -1714,7 +1732,12 @@ static void oplus_wired_chg_type_change_work(struct work_struct *work)
 			return;
 		chip->chg_mode = (chip->vbus_status == VBUS_STS_12V_RDY) ?
 			OPLUS_WIRED_CHG_MODE_PD12V : OPLUS_WIRED_CHG_MODE_PD;
-		chip->pd_action = OPLUS_ACTION_BOOST;
+		if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY) {
+			chip->pd_action = (chip->vbus_mv > PDQC_BUCK_VBUS_THR) ?
+				OPLUS_ACTION_BUCK : OPLUS_ACTION_NULL;
+		} else {
+			chip->pd_action = OPLUS_ACTION_BOOST;
+		}
 		schedule_delayed_work(&chip->pd_config_work, 0);
 		break;
 	default:
@@ -1876,7 +1899,12 @@ static void oplus_wired_pd_check_work(struct work_struct *work)
 		}
 		chip->chg_mode = (chip->vbus_status == VBUS_STS_12V_RDY) ?
 			OPLUS_WIRED_CHG_MODE_PD12V : OPLUS_WIRED_CHG_MODE_PD;
-		chip->pd_action = OPLUS_ACTION_BOOST;
+		if (oplus_pps_get_user_pd_mode() == OPLUS_USER_PD_5V_ONLY) {
+			chip->pd_action = (chip->vbus_mv > PDQC_BUCK_VBUS_THR) ?
+				OPLUS_ACTION_BUCK : OPLUS_ACTION_NULL;
+		} else {
+			chip->pd_action = OPLUS_ACTION_BOOST;
+		}
 		schedule_delayed_work(&chip->pd_config_work, 0);
 		break;
 	default:
@@ -2936,6 +2964,7 @@ static int oplus_wired_probe(struct platform_device *pdev)
 	(void)oplus_wired_reg_debug_config(chip);
 #endif
 
+	WRITE_ONCE(g_oplus_wired, chip);
 	chg_info("probe success\n");
 	return 0;
 
@@ -2993,6 +3022,8 @@ static int oplus_wired_remove(struct platform_device *pdev)
 		if (chip->config.strategy_data[i])
 			devm_kfree(&pdev->dev, chip->config.strategy_data[i]);
 	}
+	if (READ_ONCE(g_oplus_wired) == chip)
+		WRITE_ONCE(g_oplus_wired, NULL);
 	devm_kfree(&pdev->dev, chip);
 	platform_set_drvdata(pdev, NULL);
 
@@ -3000,6 +3031,39 @@ static int oplus_wired_remove(struct platform_device *pdev)
 	return 0;
 #endif
 }
+
+void oplus_wired_pd_mode_changed(int mode)
+{
+	struct oplus_chg_wired *chip = READ_ONCE(g_oplus_wired);
+
+	if (!chip || !chip->chg_online)
+		return;
+
+	if (chip->chg_mode != OPLUS_WIRED_CHG_MODE_PD &&
+	    chip->chg_mode != OPLUS_WIRED_CHG_MODE_PD12V)
+		return;
+
+	if (mode == OPLUS_USER_PD_5V_ONLY) {
+		cancel_delayed_work_sync(&chip->pd_config_work);
+		chip->vbus_mv = oplus_wired_get_vbus();
+		if (chip->vbus_mv > PDQC_BUCK_VBUS_THR) {
+			chip->pd_action = OPLUS_ACTION_BUCK;
+			schedule_delayed_work(&chip->pd_config_work, 0);
+		} else {
+			chip->pd_action = OPLUS_ACTION_NULL;
+			chip->vbus_set_mv = OPLUS_CHG_VBUS_5V;
+			oplus_wired_set_vbus_vol_type(chip, OPLUS_VBUS_5V);
+			oplus_wired_set_pd_config(OPLUS_PD_5V_PDO);
+			oplus_wired_current_set(chip, true);
+		}
+	} else {
+		/* AUTO or FIXED (allows 9V/12V boost) */
+		cancel_delayed_work_sync(&chip->pd_config_work);
+		chip->pd_action = OPLUS_ACTION_BOOST;
+		schedule_delayed_work(&chip->pd_config_work, 0);
+	}
+}
+EXPORT_SYMBOL_GPL(oplus_wired_pd_mode_changed);
 
 static const struct of_device_id oplus_wired_match[] = {
 	{ .compatible = "oplus,wired" },
